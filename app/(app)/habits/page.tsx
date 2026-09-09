@@ -2,6 +2,7 @@ import { HabitList } from "@/components/habit-list";
 import { Suspense } from "react";
 import { getActiveHabits } from "@/lib/habits/queries";
 import { formatHabitSchedule } from "@/lib/habits/schedule";
+import { HabitForm } from "@/components/habit-form";
 
 async function ActiveHabits() {
   const result = await getActiveHabits();
@@ -30,6 +31,7 @@ export default function HabitsPage() {
         <h1 className="text-3xl font-semibold tracking-tight">My Habits</h1>
         <p className="text-muted-foreground">꾸준히 이어갈 나만의 습관을 모아보세요.</p>
       </div>
+      <HabitForm />
       <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">습관 목록을 불러오는 중...</p>}>
         <ActiveHabits />
       </Suspense>
