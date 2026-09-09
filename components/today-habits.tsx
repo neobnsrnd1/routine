@@ -19,27 +19,48 @@ type TodayHabit = {
   weeklyTarget?: number;
 };
 export function TodayHabits() {
-  const [date] = useState(localDate);
+  const [date, setDate] = useState(localDate);
   const [habits, setHabits] = useState<TodayHabit[]>([]);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
   useEffect(() => {
+    let active = true;
     getTodayHabits(date).then((r) => {
-      if (r.success) setHabits(r.habits);
-      else setMessage(r.message);
+      if (!active) return;
+      if (r.success) {
+        setHabits(r.habits);
+        setMessage("");
+      } else setMessage(r.message);
     });
+    return () => {
+      active = false;
+    };
+  }, [date]);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const current = localDate();
+      if (current !== date) setDate(current);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [date]);
   const toggle = (h: TodayHabit) =>
     startTransition(async () => {
+      const currentDate = localDate();
+      if (currentDate !== date) {
+        setDate(currentDate);
+        return;
+      }
       const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const result = h.completed
-        ? await uncompleteHabit(h.id, date, zone)
-        : await completeHabit(h.id, date, zone);
+        ? await uncompleteHabit(h.id, currentDate, zone)
+        : await completeHabit(h.id, currentDate, zone);
       if (!result.success) {
         setMessage(result.message);
         return;
       }
-      const refreshed = await getTodayHabits(date);
+      const refreshed = await getTodayHabits(currentDate);
       if (refreshed.success) setHabits(refreshed.habits);
       else setMessage(refreshed.message);
     });
@@ -56,6 +77,7 @@ export function TodayHabits() {
         {done} / {habits.length} completed
       </p>
       <progress
+        aria-label="오늘 습관 완료 진행률"
         value={done}
         max={habits.length || 1}
         className="h-2 w-full accent-primary"
@@ -67,6 +89,7 @@ export function TodayHabits() {
               type="button"
               onClick={() => toggle(h)}
               disabled={pending}
+              aria-label={`${h.name} ${h.completed ? "완료 취소" : "완료 처리"}`}
               aria-pressed={h.completed}
               className="h-5 w-5 rounded-full border"
             >

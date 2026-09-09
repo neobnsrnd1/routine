@@ -19,23 +19,40 @@ type Data = {
   activity: { date: string; count: number }[];
   cards: Card[];
 };
+type ErrorState = { key: string; message: string } | null;
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 export function StatsView() {
+  const [date, setDate] = useState(today);
   const [data, setData] = useState<Data | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ErrorState>(null);
   useEffect(() => {
-    const date = today();
+    let active = true;
     getStats(date, Intl.DateTimeFormat().resolvedOptions().timeZone).then(
       (r) => {
+        if (!active) return;
         if (r.success) setData(r);
-        else setError(r.message);
+        else setError({ key: date, message: r.message });
       },
     );
-  }, []);
-  if (error) return <p role="alert">{error}</p>;
+    return () => {
+      active = false;
+    };
+  }, [date]);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const current = today();
+      if (current !== date) {
+        setDate(current);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [date]);
+  if (error?.key === date) return <p role="alert">{error.message}</p>;
   if (!data) return <p role="status">Loading...</p>;
   return (
     <div className="space-y-8">
@@ -86,6 +103,11 @@ export function StatsView() {
             </p>
             <div className="mt-1 h-2 rounded bg-muted">
               <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(card.rate7 * 100)}
+                aria-label={`${card.name} 최근 7일 달성률`}
                 className="h-2 rounded bg-primary"
                 style={{ width: `${Math.round(card.rate7 * 100)}%` }}
               />
@@ -95,6 +117,11 @@ export function StatsView() {
             </p>
             <div className="mt-1 h-2 rounded bg-muted">
               <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(card.rate30 * 100)}
+                aria-label={`${card.name} 최근 30일 달성률`}
                 className="h-2 rounded bg-primary"
                 style={{ width: `${Math.round(card.rate30 * 100)}%` }}
               />

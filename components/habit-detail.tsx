@@ -11,6 +11,7 @@ type DetailData = {
   rate30: { rate: number };
   rows: { completed_date: string }[];
 };
+type ErrorState = { key: string; message: string } | null;
 const localDate = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -22,28 +23,44 @@ const add = (v: string, n: number) => {
 };
 const dow = (v: string) => new Date(`${v}T00:00:00Z`).getUTCDay();
 export function HabitDetail({ id }: Props) {
+  const [date, setDate] = useState(localDate);
   const [data, setData] = useState<DetailData | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ErrorState>(null);
+  const requestKey = `${id}:${date}`;
   useEffect(() => {
-    const date = localDate();
+    let active = true;
     getHabitDetail(
       id,
       date,
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     ).then((r) => {
+      if (!active) return;
       if (r.success) setData(r);
-      else setError(r.message);
+      else setError({ key: requestKey, message: r.message });
     });
-  }, [id]);
-  if (error) return <p role="alert">{error}</p>;
+    return () => {
+      active = false;
+    };
+  }, [id, date, requestKey]);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const current = localDate();
+      if (current !== date) setDate(current);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [date]);
+  if (error?.key === requestKey) return <p role="alert">{error.message}</p>;
   if (!data) return <p role="status">Loading...</p>;
   const h = data.habit,
+    currentDate = date,
     rate7 = Math.round(data.rate7.rate * 100),
     rate30 = Math.round(data.rate30.rate * 100),
     done = new Set(data.rows.map((r) => r.completed_date)),
     dates: Array<string> = [];
   for (let i = 0; i < 30; i++) {
-    const date = add(localDate(), -i);
+    const date = add(currentDate, -i);
     if (date >= h.start_date) dates.push(date);
   }
   const unit =
@@ -71,6 +88,11 @@ export function HabitDetail({ id }: Props) {
           최근 7일 {rate7}%
           <div className="mt-2 h-2 rounded bg-muted">
             <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={rate7}
+              aria-label={`${h.name} 최근 7일 달성률`}
               className="h-2 rounded bg-primary"
               style={{ width: `${rate7}%` }}
             />
@@ -80,6 +102,11 @@ export function HabitDetail({ id }: Props) {
           최근 30일 {rate30}%
           <div className="mt-2 h-2 rounded bg-muted">
             <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={rate30}
+              aria-label={`${h.name} 최근 30일 달성률`}
               className="h-2 rounded bg-primary"
               style={{ width: `${rate30}%` }}
             />

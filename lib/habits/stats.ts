@@ -32,7 +32,6 @@ const add = (v: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const dow = (v: string) => new Date(`${v}T00:00:00Z`).getUTCDay();
 function schedule(h: Habit) {
   if (h.schedule_type === "daily") return "\ub9e4\uc77c";
   if (h.schedule_type === "weekly_target")

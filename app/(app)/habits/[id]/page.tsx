@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { HabitDetail } from "@/components/habit-detail";
-export default async function HabitDetailPage({
+async function HabitAccessGate({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -19,4 +20,16 @@ export default async function HabitDetailPage({
     .maybeSingle();
   if (error || !data) notFound();
   return <HabitDetail id={id} />;
+}
+
+export default function HabitDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<p role="status">Loading...</p>}>
+      <HabitAccessGate params={params} />
+    </Suspense>
+  );
 }
