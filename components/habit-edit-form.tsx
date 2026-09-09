@@ -1,15 +1,17 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { updateHabit, type UpdateHabitState } from "@/lib/habits/actions";
+import { archiveHabit, updateHabit, type ArchiveHabitState, type UpdateHabitState } from "@/lib/habits/actions";
 import type { Habit } from "@/lib/habits/types";
 
 const initialState: UpdateHabitState = { status: "idle", message: "" };
+const initialArchiveState: ArchiveHabitState = { status: "idle", message: "" };
 
 type EditableHabit = Habit & { has_completions: boolean };
 
 export function HabitEditForm({ habit }: { habit: EditableHabit }) {
   const [state, action, pending] = useActionState(updateHabit, initialState);
+  const [archiveState, archiveAction, archivePending] = useActionState(archiveHabit, initialArchiveState);
   const locked = habit.has_completions;
   const [schedule, setSchedule] = useState(habit.schedule_type);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(habit.days_of_week ?? []);
@@ -23,7 +25,9 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
     {!locked && schedule === "specific_days" && <div className="flex flex-wrap gap-2">{["일", "월", "화", "수", "목", "금", "토"].map((day, index) => <label key={day} className="text-sm"><input type="checkbox" name="days_of_week" value={index} checked={daysOfWeek.includes(index)} onChange={() => setDaysOfWeek((current) => current.includes(index) ? current.filter((value) => value !== index) : [...current, index])} /> {day}</label>)}</div>}
     {!locked && schedule === "weekly_target" && <select name="target_per_week" value={targetPerWeek} onChange={(event) => setTargetPerWeek(Number(event.target.value))} className="h-9 w-full rounded-md border px-3 text-sm">{[1, 2, 3, 4, 5, 6, 7].map((value) => <option key={value} value={value}>{value}회</option>)}</select>}
     <button type="submit" disabled={pending} className="rounded-md border px-3 py-1.5 text-sm">{pending ? "저장 중..." : "수정 저장"}</button>
+    <button type="submit" formAction={archiveAction} disabled={archivePending} onClick={(event) => { if (!window.confirm("이 습관을 보관하시겠습니까?")) event.preventDefault(); }} className="rounded-md border px-3 py-1.5 text-sm text-destructive">{archivePending ? "보관 중..." : "보관"}</button>
     {locked && <p className="text-xs text-muted-foreground">완료 기록이 있는 습관은 반복 설정을 변경할 수 없습니다.</p>}
     {state.message && <p role={state.status === "error" ? "alert" : "status"} className="text-sm text-muted-foreground">{state.message}</p>}
+    {archiveState.message && <p role={archiveState.status === "error" ? "alert" : "status"} className="text-sm text-muted-foreground">{archiveState.message}</p>}
   </form>;
 }

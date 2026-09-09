@@ -10,6 +10,7 @@ export type CreateHabitState = {
   resetKey?: string;
 };
 export type UpdateHabitState = { status: "idle" | "success" | "error"; message: string; resetKey?: string };
+export type ArchiveHabitState = { status: "idle" | "success" | "error"; message: string };
 
 const initialState: CreateHabitState = { status: "idle", message: "" };
 
@@ -34,6 +35,34 @@ function parseSchedule(formData: FormData) {
     targetPerWeek = value;
   } else if (scheduleType !== "daily") return null;
   return { scheduleType, daysOfWeek, targetPerWeek };
+}
+
+export async function archiveHabit(_previousState: ArchiveHabitState, formData: FormData): Promise<ArchiveHabitState> {
+  try {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getClaims();
+    const userId = authData?.claims?.sub;
+    const habitId = String(formData.get("habit_id") ?? "");
+    if (authError || !userId) return { status: "error", message: "로그인 상태를 확인할 수 없습니다." };
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(habitId)) return { status: "error", message: "보관할 습관을 찾을 수 없습니다." };
+
+    const { data, error } = await supabase
+      .from("habits")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", habitId)
+      .eq("user_id", userId)
+      .is("archived_at", null)
+      .select("id")
+      .maybeSingle();
+    if (error) return { status: "error", message: "습관을 보관하지 못했습니다." };
+    if (!data) return { status: "error", message: "보관할 습관을 찾을 수 없습니다." };
+    revalidatePath("/habits");
+    revalidatePath("/dashboard");
+    return { status: "success", message: "습관이 보관되었습니다." };
+  } catch (error) {
+    console.error("Unexpected error while archiving habit", error instanceof Error ? error.name : "UnknownError");
+    return { status: "error", message: "습관을 보관하지 못했습니다." };
+  }
 }
 
 export async function updateHabit(_previousState: UpdateHabitState, formData: FormData): Promise<UpdateHabitState> {
