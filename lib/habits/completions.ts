@@ -3,11 +3,224 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Habit } from "./types";
 import { calculateHabitStreak } from "./streak";
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const dateOk=(v:string)=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const [y,m,d]=v.split("-").map(Number),x=new Date(Date.UTC(y,m-1,d));return x.getUTCFullYear()===y&&x.getUTCMonth()===m-1&&x.getUTCDate()===d;};
-const zoneDate=(z:string)=>{try{return new Intl.DateTimeFormat("en-CA",{timeZone:z,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date);}catch{return null;}};
-function weekRange(date:string){const d=new Date(`${date}T00:00:00Z`),offset=(d.getUTCDay()+6)%7,start=new Date(d);start.setUTCDate(d.getUTCDate()-offset);const end=new Date(start);end.setUTCDate(start.getUTCDate()+6);const fmt=(x:Date)=>x.toISOString().slice(0,10);return {start:fmt(start),end:fmt(end)};}
-async function auth(){const supabase=await createClient();const {data}=await supabase.auth.getClaims();return {supabase,userId:data?.claims?.sub};}
-export async function getTodayHabits(date:string){const {supabase,userId}=await auth();if(!userId||!dateOk(date))return {success:false as const,message:"오늘 습관을 불러오지 못했습니다."};const {start,end}=weekRange(date);const {data,error}=await supabase.from("habits").select("id,user_id,name,schedule_type,days_of_week,target_per_week,start_date,archived_at,created_at,updated_at").eq("user_id",userId).is("archived_at",null).lte("start_date",date).order("created_at",{ascending:true}).returns<Habit[]>();if(error||!data)return {success:false as const,message:"오늘 습관을 불러오지 못했습니다."};const day=new Date(`${date}T00:00:00Z`).getUTCDay(),habits=data.filter(h=>h.schedule_type!=="specific_days"||(h.days_of_week??[]).includes(day));const result=habits.length?await supabase.from("habit_completions").select("habit_id,completed_date").eq("user_id",userId).in("habit_id",habits.map(h=>h.id)): {data:[] as {habit_id:string;completed_date:string}[],error:null};if(result.error)return {success:false as const,message:"오늘 습관을 불러오지 못했습니다."};const history=result.data??[],todayDone=new Set(history.filter(r=>r.completed_date===date).map(r=>r.habit_id));const weekly=history.filter(r=>r.completed_date>=start&&r.completed_date<=end);const weeklyCount=new Map<string,number>();for(const row of weekly)weeklyCount.set(row.habit_id,(weeklyCount.get(row.habit_id)??0)+1);return {success:true as const,habits:habits.map(h=>({...h,completed:todayDone.has(h.id),streakCount:calculateHabitStreak(h,history,date),weeklyCompletedCount:h.schedule_type==="weekly_target"?(weeklyCount.get(h.id)??0):undefined,weeklyTarget:h.schedule_type==="weekly_target"?h.target_per_week??0:undefined}))};}
-export async function completeHabit(id:string,date:string,timezone:string){try{const {supabase,userId}=await auth(),today=zoneDate(timezone);if(!userId||!uuid.test(id)||!dateOk(date)||!timezone.trim()||timezone.length>100||!today||today!==date)return {success:false as const,message:"완료 처리에 필요한 값이 올바르지 않습니다."};const {data:h}=await supabase.from("habits").select("id,archived_at,start_date,schedule_type,days_of_week").eq("id",id).eq("user_id",userId).maybeSingle();if(!h||h.archived_at||date<h.start_date)return {success:false as const,message:"완료 처리할 습관을 찾을 수 없습니다."};if(h.schedule_type==="specific_days"&&!((h.days_of_week??[]).includes(new Date(`${date}T00:00:00Z`).getUTCDay())))return {success:false as const,message:"오늘 실행 대상이 아닌 습관입니다."};const {error}=await supabase.from("habit_completions").upsert({habit_id:id,user_id:userId,completed_date:date,completed_timezone:timezone},{onConflict:"habit_id,completed_date",ignoreDuplicates:true});if(error)return {success:false as const,message:"습관 완료 처리에 실패했습니다."};revalidatePath("/dashboard");revalidatePath("/habits");return {success:true as const};}catch{return {success:false as const,message:"습관 완료 처리에 실패했습니다."};}}
-export async function uncompleteHabit(id:string,date:string,timezone:string){try{const {supabase,userId}=await auth();if(!userId||!uuid.test(id)||!dateOk(date)||!timezone.trim()||timezone.length>100||zoneDate(timezone)!==date)return {success:false as const,message:"완료 해제에 필요한 값이 올바르지 않습니다."};const {error}=await supabase.from("habit_completions").delete().eq("habit_id",id).eq("user_id",userId).eq("completed_date",date);if(error)return {success:false as const,message:"습관 완료 해제에 실패했습니다."};revalidatePath("/dashboard");revalidatePath("/habits");return {success:true as const};}catch{return {success:false as const,message:"습관 완료 해제에 실패했습니다."};}}
+const uuid =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const dateOk = (v: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [y, m, d] = v.split("-").map(Number),
+    x = new Date(Date.UTC(y, m - 1, d));
+  return (
+    x.getUTCFullYear() === y &&
+    x.getUTCMonth() === m - 1 &&
+    x.getUTCDate() === d
+  );
+};
+const zoneDate = (z: string) => {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: z,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return null;
+  }
+};
+function weekRange(date: string) {
+  const d = new Date(`${date}T00:00:00Z`),
+    offset = (d.getUTCDay() + 6) % 7,
+    start = new Date(d);
+  start.setUTCDate(d.getUTCDate() - offset);
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+  const fmt = (x: Date) => x.toISOString().slice(0, 10);
+  return { start: fmt(start), end: fmt(end) };
+}
+async function auth() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  return { supabase, userId: data?.claims?.sub };
+}
+export async function getTodayHabits(date: string) {
+  const { supabase, userId } = await auth();
+  if (!userId || !dateOk(date))
+    return {
+      success: false as const,
+      message: "오늘 습관을 불러오지 못했습니다.",
+    };
+  const { start, end } = weekRange(date);
+  const { data, error } = await supabase
+    .from("habits")
+    .select(
+      "id,user_id,name,schedule_type,days_of_week,target_per_week,start_date,archived_at,created_at,updated_at",
+    )
+    .eq("user_id", userId)
+    .is("archived_at", null)
+    .lte("start_date", date)
+    .order("created_at", { ascending: true })
+    .returns<Habit[]>();
+  if (error || !data)
+    return {
+      success: false as const,
+      message: "오늘 습관을 불러오지 못했습니다.",
+    };
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay(),
+    habits = data.filter(
+      (h) =>
+        h.schedule_type !== "specific_days" ||
+        (h.days_of_week ?? []).includes(day),
+    );
+  const result = habits.length
+    ? await supabase
+        .from("habit_completions")
+        .select("habit_id,completed_date")
+        .eq("user_id", userId)
+        .in(
+          "habit_id",
+          habits.map((h) => h.id),
+        )
+    : {
+        data: [] as { habit_id: string; completed_date: string }[],
+        error: null,
+      };
+  if (result.error)
+    return {
+      success: false as const,
+      message: "오늘 습관을 불러오지 못했습니다.",
+    };
+  const history = result.data ?? [],
+    todayDone = new Set(
+      history.filter((r) => r.completed_date === date).map((r) => r.habit_id),
+    );
+  const weekly = history.filter(
+    (r) => r.completed_date >= start && r.completed_date <= end,
+  );
+  const weeklyCount = new Map<string, number>();
+  for (const row of weekly)
+    weeklyCount.set(row.habit_id, (weeklyCount.get(row.habit_id) ?? 0) + 1);
+  return {
+    success: true as const,
+    habits: habits.map((h) => ({
+      ...h,
+      completed: todayDone.has(h.id),
+      streakCount: calculateHabitStreak(h, history, date),
+      weeklyCompletedCount:
+        h.schedule_type === "weekly_target"
+          ? (weeklyCount.get(h.id) ?? 0)
+          : undefined,
+      weeklyTarget:
+        h.schedule_type === "weekly_target"
+          ? (h.target_per_week ?? 0)
+          : undefined,
+    })),
+  };
+}
+export async function completeHabit(
+  id: string,
+  date: string,
+  timezone: string,
+) {
+  try {
+    const { supabase, userId } = await auth(),
+      today = zoneDate(timezone);
+    if (
+      !userId ||
+      !uuid.test(id) ||
+      !dateOk(date) ||
+      !timezone.trim() ||
+      timezone.length > 100 ||
+      !today ||
+      today !== date
+    )
+      return {
+        success: false as const,
+        message: "완료 처리에 필요한 값이 올바르지 않습니다.",
+      };
+    const { data: h } = await supabase
+      .from("habits")
+      .select("id,archived_at,start_date,schedule_type,days_of_week")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!h || h.archived_at || date < h.start_date)
+      return {
+        success: false as const,
+        message: "완료 처리할 습관을 찾을 수 없습니다.",
+      };
+    if (
+      h.schedule_type === "specific_days" &&
+      !(h.days_of_week ?? []).includes(
+        new Date(`${date}T00:00:00Z`).getUTCDay(),
+      )
+    )
+      return {
+        success: false as const,
+        message: "오늘 실행 대상이 아닌 습관입니다.",
+      };
+    const { error } = await supabase
+      .from("habit_completions")
+      .upsert(
+        {
+          habit_id: id,
+          user_id: userId,
+          completed_date: date,
+          completed_timezone: timezone,
+        },
+        { onConflict: "habit_id,completed_date", ignoreDuplicates: true },
+      );
+    if (error)
+      return {
+        success: false as const,
+        message: "습관 완료 처리에 실패했습니다.",
+      };
+    revalidatePath("/dashboard");
+    revalidatePath("/habits");
+    return { success: true as const };
+  } catch {
+    return {
+      success: false as const,
+      message: "습관 완료 처리에 실패했습니다.",
+    };
+  }
+}
+export async function uncompleteHabit(
+  id: string,
+  date: string,
+  timezone: string,
+) {
+  try {
+    const { supabase, userId } = await auth();
+    if (
+      !userId ||
+      !uuid.test(id) ||
+      !dateOk(date) ||
+      !timezone.trim() ||
+      timezone.length > 100 ||
+      zoneDate(timezone) !== date
+    )
+      return {
+        success: false as const,
+        message: "완료 해제에 필요한 값이 올바르지 않습니다.",
+      };
+    const { error } = await supabase
+      .from("habit_completions")
+      .delete()
+      .eq("habit_id", id)
+      .eq("user_id", userId)
+      .eq("completed_date", date);
+    if (error)
+      return {
+        success: false as const,
+        message: "습관 완료 해제에 실패했습니다.",
+      };
+    revalidatePath("/dashboard");
+    revalidatePath("/habits");
+    return { success: true as const };
+  } catch {
+    return {
+      success: false as const,
+      message: "습관 완료 해제에 실패했습니다.",
+    };
+  }
+}
