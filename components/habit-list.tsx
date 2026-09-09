@@ -1,11 +1,22 @@
 import { CheckCircle2, Circle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { demoHabits } from "@/lib/demo-habits";
 
-export function HabitList({ showCompletion = false }: { showCompletion?: boolean }) {
+type HabitListItem = {
+  id: string;
+  name: string;
+  frequency: string;
+  completed?: boolean;
+};
+
+type HabitListProps = {
+  habits: readonly HabitListItem[];
+  showCompletion?: boolean;
+};
+
+export function HabitList({ habits, showCompletion = false }: HabitListProps) {
   return (
     <ul className="divide-y rounded-xl border bg-card">
-      {demoHabits.map((habit) => (
+      {habits.map((habit) => (
         <li key={habit.id} className="flex flex-wrap items-center gap-3 p-5">
           {showCompletion && (habit.completed
             ? <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />

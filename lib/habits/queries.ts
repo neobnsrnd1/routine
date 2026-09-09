@@ -1,0 +1,36 @@
+import "server-only";
+
+import { createClient } from "@/lib/supabase/server";
+import type { Habit } from "./types";
+
+type HabitsResult =
+  | { success: true; habits: Habit[] }
+  | { success: false; message: string };
+
+export async function getActiveHabits(): Promise<HabitsResult> {
+  try {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getClaims();
+    const userId = authData?.claims?.sub;
+
+    if (authError || !userId) {
+      return { success: false, message: "로그인 상태를 확인할 수 없습니다. 다시 로그인해 주세요." };
+    }
+
+    const { data, error } = await supabase
+      .from("habits")
+      .select("id, user_id, name, schedule_type, days_of_week, target_per_week, start_date, archived_at, created_at, updated_at")
+      .eq("user_id", userId)
+      .is("archived_at", null)
+      .order("created_at", { ascending: true })
+      .returns<Habit[]>();
+
+    if (error || data === null) {
+      return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
+    }
+
+    return { success: true, habits: data };
+  } catch {
+    return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  }
+}
