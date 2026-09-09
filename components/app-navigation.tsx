@@ -8,6 +8,7 @@ const links = [
   { href: "/dashboard", label: "Today" },
   { href: "/habits", label: "Habits" },
   { href: "/calendar", label: "Calendar" },
+  { href: "/stats", label: "Stats" },
 ];
 
 export function AppNavigation() {
