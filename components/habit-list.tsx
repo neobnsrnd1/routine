@@ -1,6 +1,7 @@
 import { CheckCircle2, Circle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 type HabitListItem = {
   id: string;
@@ -24,7 +25,7 @@ export function HabitList({ habits, showCompletion = false }: HabitListProps) {
             ? <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />
             : <Circle aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground" />)}
           <div className="min-w-0 flex-1 basis-32">
-            <p className="break-words font-medium">{habit.name}</p>
+            <Link href={`/habits/${habit.id}`} className="break-words font-medium hover:underline">{habit.name}</Link>
             <p className="mt-1 text-sm text-muted-foreground">{habit.frequency}</p>
           </div>
           {showCompletion && <Badge variant={habit.completed ? "secondary" : "outline"}>{habit.completed ? "완료" : "미완료"}</Badge>}
