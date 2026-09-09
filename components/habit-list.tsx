@@ -1,11 +1,13 @@
 import { CheckCircle2, Circle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import type { ReactNode } from "react";
 
 type HabitListItem = {
   id: string;
   name: string;
   frequency: string;
   completed?: boolean;
+  edit?: ReactNode;
 };
 
 type HabitListProps = {
@@ -26,6 +28,7 @@ export function HabitList({ habits, showCompletion = false }: HabitListProps) {
             <p className="mt-1 text-sm text-muted-foreground">{habit.frequency}</p>
           </div>
           {showCompletion && <Badge variant={habit.completed ? "secondary" : "outline"}>{habit.completed ? "완료" : "미완료"}</Badge>}
+          {habit.edit}
         </li>
       ))}
     </ul>

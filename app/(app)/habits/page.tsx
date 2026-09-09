@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getActiveHabits } from "@/lib/habits/queries";
 import { formatHabitSchedule } from "@/lib/habits/schedule";
 import { HabitForm } from "@/components/habit-form";
+import { HabitEditForm } from "@/components/habit-edit-form";
 
 async function ActiveHabits() {
   const result = await getActiveHabits();
@@ -20,6 +21,7 @@ async function ActiveHabits() {
       id: habit.id,
       name: habit.name,
       frequency: formatHabitSchedule(habit),
+      edit: <HabitEditForm habit={habit} />,
     }))} />
   );
 }
