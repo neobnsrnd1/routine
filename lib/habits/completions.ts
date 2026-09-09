@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Habit } from "./types";
 import { calculateHabitStreak } from "./streak";
+import { getAllCompletionRows } from "./completion-rows";
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const dateOk = (v: string) => {
@@ -71,25 +72,17 @@ export async function getTodayHabits(date: string) {
         h.schedule_type !== "specific_days" ||
         (h.days_of_week ?? []).includes(day),
     );
-  const result = habits.length
-    ? await supabase
-        .from("habit_completions")
-        .select("habit_id,completed_date")
-        .eq("user_id", userId)
-        .in(
-          "habit_id",
-          habits.map((h) => h.id),
-        )
-    : {
-        data: [] as { habit_id: string; completed_date: string }[],
-        error: null,
-      };
-  if (result.error)
+  const result = await getAllCompletionRows({
+    supabase,
+    userId,
+    habitIds: habits.map((h) => h.id),
+  });
+  if (!result.success)
     return {
       success: false as const,
       message: "오늘 습관을 불러오지 못했습니다.",
     };
-  const history = result.data ?? [],
+  const history = result.rows,
     todayDone = new Set(
       history.filter((r) => r.completed_date === date).map((r) => r.habit_id),
     );

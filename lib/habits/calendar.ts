@@ -1,5 +1,6 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
+import { getAllCompletionRows } from "./completion-rows";
 export type CalendarCompletion = { habitId: string; name: string };
 export async function getCalendarMonth(year: number, month: number) {
   if (
@@ -26,17 +27,18 @@ export async function getCalendarMonth(year: number, month: number) {
     const mm = String(month).padStart(2, "0"),
       start = `${year}-${mm}-01`,
       end = `${year}-${mm}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0")}`;
-    const { data: rows, error } = await supabase
-      .from("habit_completions")
-      .select("habit_id,completed_date")
-      .eq("user_id", userId)
-      .gte("completed_date", start)
-      .lte("completed_date", end);
-    if (error || !rows)
+    const completionRows = await getAllCompletionRows({
+      supabase,
+      userId,
+      startDate: start,
+      endDate: end,
+    });
+    if (!completionRows.success)
       return {
         success: false as const,
         message: "캘린더 기록을 불러오지 못했습니다.",
       };
+    const rows = completionRows.rows;
     const ids = [...new Set(rows.map((r) => r.habit_id))];
     const { data: habits, error: habitError } = ids.length
       ? await supabase

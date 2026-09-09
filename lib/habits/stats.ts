@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Habit } from "./types";
 import { calculateHabitStreak } from "./streak";
 import { completionRate } from "./rates";
+import { getAllCompletionRows } from "./completion-rows";
 const message =
   "\ud1b5\uacc4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.";
 const validDate = (v: string) => {
@@ -79,21 +80,16 @@ export async function getStats(today: string, timezone: string) {
         today,
       ),
       ids = habits.map((h) => h.id);
-    const result = ids.length
-      ? await supabase
-          .from("habit_completions")
-          .select("habit_id,completed_date")
-          .eq("user_id", userId)
-          .in("habit_id", ids)
-          .gte("completed_date", historyStart)
-          .lte("completed_date", today)
-      : {
-          data: [] as { habit_id: string; completed_date: string }[],
-          error: null,
-        };
-    if (result.error || !result.data)
+    const result = await getAllCompletionRows({
+      supabase,
+      userId,
+      habitIds: ids,
+      startDate: historyStart,
+      endDate: today,
+    });
+    if (!result.success)
       return { success: false as const, message };
-    const rows = result.data,
+    const rows = result.rows,
       todaySet = new Set(
         rows.filter((r) => r.completed_date === today).map((r) => r.habit_id),
       ),

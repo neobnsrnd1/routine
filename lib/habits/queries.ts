@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Habit } from "./types";
+import { getAllCompletionRows } from "./completion-rows";
 
 type HabitsResult =
   | { success: true; habits: (Habit & { has_completions: boolean })[] }
@@ -30,15 +31,17 @@ export async function getActiveHabits(): Promise<HabitsResult> {
     }
 
     const habitIds = data.map((habit) => habit.id);
-    const { data: completions, error: completionError } = habitIds.length
-      ? await supabase.from("habit_completions").select("habit_id").eq("user_id", userId).in("habit_id", habitIds)
-      : { data: [], error: null };
+    const completions = await getAllCompletionRows({
+      supabase,
+      userId,
+      habitIds,
+    });
 
-    if (completionError || completions === null) {
+    if (!completions.success) {
       return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
     }
 
-    const completedHabitIds = new Set(completions.map((completion) => completion.habit_id));
+    const completedHabitIds = new Set(completions.rows.map((completion) => completion.habit_id));
     return { success: true, habits: data.map((habit) => ({ ...habit, has_completions: completedHabitIds.has(habit.id) })) };
   } catch {
     return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };

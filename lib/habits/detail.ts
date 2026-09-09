@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { calculateHabitStreak } from "./streak";
 import { completionRate } from "./rates";
+import { getAllCompletionRows } from "./completion-rows";
 const dateOk = (v: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
   const [y, m, d] = v.split("-").map(Number),
@@ -65,14 +66,14 @@ export async function getHabitDetail(
       success: false as const,
       message: "습관 상세 정보를 불러오지 못했습니다.",
     };
-  const { data: rows, error: rowError } = await supabase
-    .from("habit_completions")
-    .select("habit_id,completed_date")
-    .eq("habit_id", id)
-    .eq("user_id", userId)
-    .gte("completed_date", habit.start_date)
-    .lte("completed_date", date);
-  if (rowError || !rows)
+  const completionRows = await getAllCompletionRows({
+    supabase,
+    userId,
+    habitIds: [habit.id],
+    startDate: habit.start_date,
+    endDate: date,
+  });
+  if (!completionRows.success)
     return {
       success: false as const,
       message: "습관 상세 정보를 불러오지 못했습니다.",
@@ -80,19 +81,19 @@ export async function getHabitDetail(
   return {
     success: true as const,
     habit,
-    streakCount: calculateHabitStreak(habit, rows, date),
+    streakCount: calculateHabitStreak(habit, completionRows.rows, date),
     rate7: completionRate(
       habit,
-      rows,
+      completionRows.rows,
       add(date, -6) < habit.start_date ? habit.start_date : add(date, -6),
       date,
     ),
     rate30: completionRate(
       habit,
-      rows,
+      completionRows.rows,
       add(date, -29) < habit.start_date ? habit.start_date : add(date, -29),
       date,
     ),
-    rows,
+    rows: completionRows.rows,
   };
 }
