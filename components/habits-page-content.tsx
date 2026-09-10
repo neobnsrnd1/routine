@@ -14,10 +14,11 @@ export function HabitsPageContent({
 }) {
   const [showForm, setShowForm] = useState(initialOpen);
   const router = useRouter();
+  const clearCreateUrl = () => router.replace("/habits", { scroll: false });
   const handleToggleForm = () => {
     if (showForm) {
       setShowForm(false);
-      router.replace("/habits", { scroll: false });
+      clearCreateUrl();
       return;
     }
 
@@ -34,7 +35,14 @@ export function HabitsPageContent({
           </Button>
         }
       />
-      {showForm && <HabitForm />}
+      {showForm && (
+        <HabitForm
+          onSuccess={() => {
+            setShowForm(false);
+            clearCreateUrl();
+          }}
+        />
+      )}
       {children}
     </div>
   );

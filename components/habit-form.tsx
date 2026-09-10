@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createHabit, type CreateHabitState } from "@/lib/habits/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,12 @@ function localToday() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export function HabitForm() {
+export function HabitForm({ onSuccess }: { onSuccess?: () => void }) {
   const [state, formAction, pending] = useActionState(createHabit, initialState);
+
+  useEffect(() => {
+    if (state.status === "success") onSuccess?.();
+  }, [onSuccess, state.status]);
 
   return (
     <HabitFormFields
@@ -50,7 +54,11 @@ function HabitFormFields({ state, formAction, pending }: HabitFormFieldsProps) {
   };
 
   return (
-    <form action={formAction} onSubmit={handleSubmit} className="space-y-5 rounded-xl border bg-card p-5">
+    <form
+      action={formAction}
+      onSubmit={handleSubmit}
+      className="space-y-5 rounded-xl border bg-card p-5"
+    >
       <div className="space-y-2">
         <Label htmlFor="habit-name">습관 이름</Label>
         <Input id="habit-name" name="name" maxLength={100} required placeholder="예: 아침 산책" />
@@ -90,27 +98,31 @@ function HabitFormFields({ state, formAction, pending }: HabitFormFieldsProps) {
             {days.map((day, index) => {
               const checked = selectedDays.includes(index);
               return (
-              <label
-                key={day}
-                className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm ${checked ? "border-primary bg-accent" : "bg-card"}`}
-              >
-                <input
-                  type="checkbox"
-                  name="days_of_week"
-                  value={index}
-                  checked={checked}
-                  onChange={() =>
-                    setSelectedDays((current) =>
-                      checked ? current.filter((value) => value !== index) : [...current, index],
-                    )
-                  }
-                />
-                {day}
-              </label>
+                <label
+                  key={day}
+                  className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm ${checked ? "border-primary bg-accent" : "bg-card"}`}
+                >
+                  <input
+                    type="checkbox"
+                    name="days_of_week"
+                    value={index}
+                    checked={checked}
+                    onChange={() =>
+                      setSelectedDays((current) =>
+                        checked ? current.filter((value) => value !== index) : [...current, index],
+                      )
+                    }
+                  />
+                  {day}
+                </label>
               );
             })}
           </div>
-          {daysError && <p id="habit-days-error" role="alert" className="text-sm text-destructive">{daysError}</p>}
+          {daysError && (
+            <p id="habit-days-error" role="alert" className="text-sm text-destructive">
+              {daysError}
+            </p>
+          )}
         </fieldset>
       )}
       {schedule === "weekly_target" && (
@@ -145,7 +157,10 @@ function HabitFormFields({ state, formAction, pending }: HabitFormFieldsProps) {
         />
         <p className="text-sm text-muted-foreground">이 날짜부터 Today에 루틴이 표시돼요.</p>
       </div>
-      <FormMessage message={state.message} status={state.status === "error" ? "error" : "success"} />
+      <FormMessage
+        message={state.message}
+        status={state.status === "error" ? "error" : "success"}
+      />
       <Button type="submit" disabled={pending}>
         {pending ? "저장 중..." : "습관 저장"}
       </Button>
