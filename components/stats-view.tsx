@@ -74,8 +74,16 @@ export function StatsView() {
       />
     );
   const maxActivity = Math.max(...data.activity.map((item) => item.count), 1);
+  const hasEnoughRecentData = data.last30Count >= 3;
   return (
     <div className="space-y-8">
+      <p role="status" className="text-sm text-muted-foreground">
+        {hasEnoughRecentData
+          ? "최근 30일 완료 기록을 기준으로 계산한 통계예요."
+          : data.last30Count === 0
+            ? "아직 완료 기록이 없어요. 기록이 쌓이면 최근 추세를 확인할 수 있어요."
+            : "아직 데이터가 적어요. 완료 기록이 더 쌓이면 최근 추세를 더 정확하게 볼 수 있어요."}
+      </p>
       <section aria-label="핵심 요약" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["활성 루틴", data.activeCount],
@@ -127,6 +135,7 @@ export function StatsView() {
         <div className="grid gap-3 sm:grid-cols-2">
           {data.cards.map((card) => {
             const rate = Math.round(card.rate30 * 100);
+            const hasRateData = card.rate30Denominator > 0;
             return (
               <Card key={card.id}>
                 <CardHeader className="pb-2">
@@ -136,9 +145,11 @@ export function StatsView() {
                 <CardContent className="space-y-3">
                   <div className="flex items-end justify-between gap-3">
                     <span className="text-sm text-muted-foreground">최근 30일 달성률</span>
-                    <span className="text-xl font-semibold tabular-nums">{rate}%</span>
+                    <span className="text-xl font-semibold tabular-nums">
+                      {hasRateData ? `${rate}%` : "—"}
+                    </span>
                   </div>
-                  <div
+                  {hasRateData && <div
                     role="progressbar"
                     aria-label={`${card.name} 최근 30일 달성률`}
                     aria-valuemin={0}
@@ -147,7 +158,8 @@ export function StatsView() {
                     className="h-2 overflow-hidden rounded-full bg-secondary"
                   >
                     <div className="h-full bg-primary" style={{ width: `${rate}%` }} />
-                  </div>
+                  </div>}
+                  {!hasRateData && <p className="text-sm text-muted-foreground">아직 계산할 기록이 없어요.</p>}
                   <p className="text-sm text-muted-foreground">현재 {card.streakCount}일 연속</p>
                 </CardContent>
               </Card>
