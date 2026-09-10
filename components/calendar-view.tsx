@@ -1,109 +1,154 @@
 "use client";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getCalendarMonth, type CalendarCompletion } from "@/lib/habits/calendar";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
+import { LoadingState } from "@/components/loading-state";
+
 const today = () => {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
 };
 const pad = (n: number) => String(n).padStart(2, "0");
+const formatMonth = (year: number, month: number) =>
+  new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(
+    new Date(Date.UTC(year, month - 1, 1)),
+  );
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  }).format(new Date(value + "T00:00:00"));
+
 export function CalendarView() {
-  const [initial] = useState(today),
-    [year, setYear] = useState(0),
-    [month, setMonth] = useState(0),
-    [selected, setSelected] = useState(""),
-    [days, setDays] = useState<Record<string, CalendarCompletion[]>>({}),
+  const [initial] = useState(today);
+  const [year, setYear] = useState(() => Number(initial.slice(0, 4))),
+    [month, setMonth] = useState(() => Number(initial.slice(5, 7))),
+    [selected, setSelected] = useState(initial);
+  const [days, setDays] = useState<Record<string, CalendarCompletion[]>>({}),
     [loading, setLoading] = useState(true),
     [error, setError] = useState("");
   useEffect(() => {
-    queueMicrotask(() => {
-      const parts = initial.split("-").map(Number);
-      setYear(parts[0]);
-      setMonth(parts[1]);
-      setSelected(initial);
-    });
-  }, [initial]);
-  useEffect(() => {
     if (!year || !month) return;
     let active = true;
-    getCalendarMonth(year, month).then((r) => {
-      if (!active) return;
-      if (r.success) {
-        setDays(r.days);
-        setError("");
-      } else setError(r.message);
-      setLoading(false);
-    });
+    const load = async () => {
+      try {
+        const result = await getCalendarMonth(year, month);
+        if (!active) return;
+        if (result.success) {
+          setDays(result.days);
+          setError("");
+        } else setError(result.message);
+      } catch {
+        if (active) setError("달력 기록을 불러오지 못했어요.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
     return () => {
       active = false;
     };
   }, [year, month]);
   const cells = useMemo(() => {
     if (!year || !month) return [];
-    const first = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7,
-      count = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+    const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
     return [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => i + 1)];
   }, [year, month]);
-  const move = (n: number) => {
-    const d = new Date(Date.UTC(year, month - 1 + n, 1));
+  const move = (offset: number) => {
+    const value = new Date(Date.UTC(year, month - 1 + offset, 1));
     setLoading(true);
     setError("");
-    setYear(d.getUTCFullYear());
-    setMonth(d.getUTCMonth() + 1);
-    setSelected(`${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-01`);
+    setYear(value.getUTCFullYear());
+    setMonth(value.getUTCMonth() + 1);
+    setSelected([value.getUTCFullYear(), pad(value.getUTCMonth() + 1), "01"].join("-"));
   };
   const records = days[selected] ?? [];
-  if (!year || !month) return <p role="status">Loading...</p>;
+  if (!year || !month) return <LoadingState label="달력을 불러오는 중..." />;
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <button
+      <div className="flex items-center justify-between gap-3">
+        <Button
           type="button"
+          variant="outline"
+          size="icon"
+          className="h-11 w-11"
           onClick={() => move(-1)}
-          className="rounded-md border px-3 py-2 text-sm"
+          aria-label="이전 달"
         >
-          Prev
-        </button>
-        <h2 className="text-xl font-semibold">
-          {year}-{pad(month)}
+          <ChevronLeft aria-hidden="true" />
+        </Button>
+        <h2 className="text-xl font-semibold" aria-live="polite">
+          {formatMonth(year, month)}
         </h2>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="icon"
+          className="h-11 w-11"
           onClick={() => move(1)}
-          className="rounded-md border px-3 py-2 text-sm"
+          aria-label="다음 달"
         >
-          Next
-        </button>
+          <ChevronRight aria-hidden="true" />
+        </Button>
       </div>
       {loading ? (
-        <p role="status">Loading...</p>
+        <LoadingState label="달력 기록을 불러오는 중..." />
       ) : error ? (
-        <p role="alert">{error}</p>
+        <ErrorState message={error} />
       ) : (
         <>
           <div className="grid grid-cols-7 gap-1 text-center text-sm">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="p-2 font-medium">
-                {d}
+            {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+              <div key={day} className="p-1.5 font-medium text-muted-foreground sm:p-2">
+                {day}
               </div>
             ))}
-            {cells.map((day, i) => {
-              const date = day ? `${year}-${pad(month)}-${pad(day)}` : `empty-${i}`,
-                items = day ? (days[date] ?? []) : [];
+            {cells.map((day, index) => {
+              const value = day ? [year, pad(month), pad(day)].join("-") : "empty-" + index;
+              const items = day ? (days[value] ?? []) : [];
+              const isToday = value === today(),
+                isSelected = value === selected;
+              const label = day
+                ? formatDate(value) +
+                  (items.length ? ", 완료 기록 " + items.length + "개" : ", 완료 기록 없음") +
+                  (isSelected ? ", 선택됨" : "") +
+                  (isToday ? ", 오늘" : "")
+                : undefined;
               return (
                 <button
-                  key={date}
+                  key={value}
                   type="button"
                   disabled={!day}
-                  onClick={() => day && setSelected(date)}
-                  className={`flex min-h-16 min-w-0 flex-col items-start justify-between rounded-md border p-2 text-left whitespace-nowrap ${date === today() ? "border-primary bg-primary/10 font-semibold" : ""} ${date === selected ? "bg-accent ring-1 ring-ring" : ""}`}
+                  onClick={() => day && setSelected(value)}
+                  aria-label={label}
+                  aria-pressed={day ? isSelected : undefined}
+                  className={
+                    "flex min-h-14 min-w-0 flex-col items-center justify-between rounded-md border p-1.5 sm:min-h-16 sm:p-2 " +
+                    (isToday ? "border-primary font-semibold " : "") +
+                    (isSelected ? "bg-accent ring-1 ring-ring" : "bg-card")
+                  }
                 >
                   {day && (
                     <>
                       <span>{day}</span>
-                      {items.length > 0 && (
-                        <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-chart-1">
-                          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+                      {items.length ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold">
+                          <Check aria-hidden="true" className="h-3.5 w-3.5 text-primary" />
                           {items.length}
+                        </span>
+                      ) : (
+                        <span aria-hidden="true" className="text-muted-foreground">
+                          ·
                         </span>
                       )}
                     </>
@@ -112,17 +157,32 @@ export function CalendarView() {
               );
             })}
           </div>
-          <section className="rounded-xl border bg-card p-5">
-            <h3 className="font-medium">{selected}</h3>
-            <p className="mt-1 text-sm">완료 {records.length}</p>
+          <section aria-labelledby="selected-date" className="rounded-xl border bg-card p-5">
+            <h3 id="selected-date" className="font-medium">
+              {formatDate(selected)}
+            </h3>
             {records.length ? (
-              <ul className="mt-3 list-disc pl-5 text-sm">
-                {records.map((r) => (
-                  <li key={r.habitId}>{r.name}</li>
+              <ul className="mt-3 divide-y">
+                {records.map((record) => (
+                  <li
+                    key={record.habitId}
+                    className="flex items-center justify-between gap-3 py-3 text-sm"
+                  >
+                    <span className="min-w-0 break-words">{record.name}</span>
+                    <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
+                      <Check aria-hidden="true" className="h-4 w-4 text-primary" />
+                      완료
+                    </span>
+                  </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm">완료 기록이 없습니다.</p>
+              <div className="mt-3">
+                <EmptyState
+                  title="이 날짜의 완료 기록이 없어요."
+                  description="완료한 루틴이 있으면 여기에 표시됩니다."
+                />
+              </div>
             )}
           </section>
         </>
