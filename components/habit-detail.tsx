@@ -33,6 +33,16 @@ const formatDate = (value: string) =>
   new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "long" }).format(
     new Date(`${value}T00:00:00`),
   );
+const localDateFromTimestamp = (value: string, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(value));
+  const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
 
 export function HabitDetail({ id }: { id: string }) {
   const [date, setDate] = useState(localDate);
@@ -74,7 +84,10 @@ export function HabitDetail({ id }: { id: string }) {
 
   const { habit, rows } = data;
   const completed = new Set(rows.map((row) => row.completed_date));
-  const archivedDate = habit.archived_at ? habit.archived_at.slice(0, 10) : null;
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const archivedDate = habit.archived_at
+    ? localDateFromTimestamp(habit.archived_at, timeZone)
+    : null;
   const dates = Array.from({ length: 30 }, (_, index) => add(date, -index)).filter(
     (value) => value >= habit.start_date,
   );
@@ -107,7 +120,9 @@ export function HabitDetail({ id }: { id: string }) {
         <p className="text-muted-foreground">{formatHabitSchedule(habit)}</p>
         <p className="text-sm text-muted-foreground">시작일: {habit.start_date}</p>
         {habit.archived_at && (
-          <p className="text-sm text-muted-foreground">기존 완료 기록은 유지되지만 Today에는 더 이상 표시되지 않아요.</p>
+          <p className="text-sm text-muted-foreground">
+            기존 완료 기록은 유지되지만 Today에는 더 이상 표시되지 않아요.
+          </p>
         )}
       </header>
       <section aria-label="루틴 요약" className="grid gap-3 sm:grid-cols-3">
