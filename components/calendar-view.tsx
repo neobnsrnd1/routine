@@ -72,33 +72,46 @@ export function CalendarView() {
     setMonth(value.getUTCMonth() + 1);
     setSelected([value.getUTCFullYear(), pad(value.getUTCMonth() + 1), "01"].join("-"));
   };
+  const goToToday = () => {
+    const current = today();
+    setLoading(true);
+    setError("");
+    setYear(Number(current.slice(0, 4)));
+    setMonth(Number(current.slice(5, 7)));
+    setSelected(current);
+  };
   const records = days[selected] ?? [];
   if (!year || !month) return <LoadingState label="달력을 불러오는 중..." />;
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-11 w-11"
-          onClick={() => move(-1)}
-          aria-label="이전 달"
-        >
-          <ChevronLeft aria-hidden="true" />
-        </Button>
-        <h2 className="text-xl font-semibold" aria-live="polite">
-          {formatMonth(year, month)}
-        </h2>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-11 w-11"
-          onClick={() => move(1)}
-          aria-label="다음 달"
-        >
-          <ChevronRight aria-hidden="true" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-11 w-11 shrink-0"
+            onClick={() => move(-1)}
+            aria-label="이전 달"
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+          <h2 className="min-w-0 text-center text-xl font-semibold" aria-live="polite">
+            {formatMonth(year, month)}
+          </h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-11 w-11 shrink-0"
+            onClick={() => move(1)}
+            aria-label="다음 달"
+          >
+            <ChevronRight aria-hidden="true" />
+          </Button>
+        </div>
+        <Button type="button" variant="outline" className="min-h-11" onClick={goToToday}>
+          오늘
         </Button>
       </div>
       {loading ? (
@@ -107,7 +120,7 @@ export function CalendarView() {
         <ErrorState message={error} />
       ) : (
         <>
-          <div className="grid grid-cols-7 gap-1 text-center text-sm">
+          <div className="grid grid-cols-7 gap-1 text-center text-sm" aria-label="월별 완료 기록">
             {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
               <div key={day} className="p-1.5 font-medium text-muted-foreground sm:p-2">
                 {day}
@@ -131,6 +144,7 @@ export function CalendarView() {
                   disabled={!day}
                   onClick={() => day && setSelected(value)}
                   aria-label={label}
+                  aria-current={isToday ? "date" : undefined}
                   aria-pressed={day ? isSelected : undefined}
                   className={
                     "flex min-h-14 min-w-0 flex-col items-center justify-between rounded-md border p-1.5 sm:min-h-16 sm:p-2 " +
@@ -156,6 +170,10 @@ export function CalendarView() {
                 </button>
               );
             })}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="달력 범례">
+            <span className="flex items-center gap-1"><Check aria-hidden="true" className="h-3.5 w-3.5 text-primary" /> 완료 기록 있음</span>
+            <span className="flex items-center gap-1"><span aria-hidden="true">·</span> 기록 없음</span>
           </div>
           <section aria-labelledby="selected-date" className="rounded-xl border bg-card p-5">
             <h3 id="selected-date" className="font-medium">
