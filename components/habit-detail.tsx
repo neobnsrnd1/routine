@@ -1,9 +1,17 @@
 "use client";
+
+import Link from "next/link";
+import { ArrowLeft, Check, Circle, Minus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getHabitDetail } from "@/lib/habits/detail";
 import { formatHabitSchedule } from "@/lib/habits/schedule";
 import type { Habit } from "@/lib/habits/types";
-type Props = { id: string };
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
+import { LoadingState } from "@/components/loading-state";
+
 type DetailData = {
   habit: Habit;
   streakCount: number;
@@ -11,113 +19,182 @@ type DetailData = {
   rate30: { rate: number };
   rows: { completed_date: string }[];
 };
-type ErrorState = { key: string; message: string } | null;
 const localDate = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-const add = (v: string, n: number) => {
-  const d = new Date(`${v}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
+const add = (value: string, days: number) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 };
-const dow = (v: string) => new Date(`${v}T00:00:00Z`).getUTCDay();
-export function HabitDetail({ id }: Props) {
+const dow = (value: string) => new Date(`${value}T00:00:00Z`).getUTCDay();
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "long" }).format(
+    new Date(`${value}T00:00:00`),
+  );
+
+export function HabitDetail({ id }: { id: string }) {
   const [date, setDate] = useState(localDate);
   const [data, setData] = useState<DetailData | null>(null);
-  const [error, setError] = useState<ErrorState>(null);
-  const requestKey = `${id}:${date}`;
+  const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    getHabitDetail(id, date, Intl.DateTimeFormat().resolvedOptions().timeZone).then((r) => {
-      if (!active) return;
-      if (r.success) setData(r);
-      else setError({ key: requestKey, message: r.message });
-    });
+    const load = async () => {
+      try {
+        const result = await getHabitDetail(
+          id,
+          date,
+          Intl.DateTimeFormat().resolvedOptions().timeZone,
+        );
+        if (!active) return;
+        if (result.success) {
+          setData(result);
+          setError("");
+        } else setError(result.message);
+      } catch {
+        if (active) setError("루틴 상세 정보를 불러오지 못했어요.");
+      }
+    };
+    void load();
     return () => {
       active = false;
     };
-  }, [id, date, requestKey]);
+  }, [id, date]);
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState !== "visible") return;
       const current = localDate();
-      if (current !== date) setDate(current);
+      if (document.visibilityState === "visible" && current !== date) setDate(current);
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [date]);
-  if (error?.key === requestKey) return <p role="alert">{error.message}</p>;
-  if (!data) return <p role="status">Loading...</p>;
-  const h = data.habit,
-    currentDate = date,
-    rate7 = Math.round(data.rate7.rate * 100),
-    rate30 = Math.round(data.rate30.rate * 100),
-    done = new Set(data.rows.map((r) => r.completed_date)),
-    dates: Array<string> = [];
-  for (let i = 0; i < 30; i++) {
-    const date = add(currentDate, -i);
-    if (date >= h.start_date) dates.push(date);
-  }
-  const unit =
-    h.schedule_type === "daily" ? "일" : h.schedule_type === "weekly_target" ? "주" : "회";
+  if (error) return <ErrorState message={error} />;
+  if (!data) return <LoadingState label="루틴 상세 정보를 불러오는 중..." />;
+
+  const { habit, rows } = data;
+  const completed = new Set(rows.map((row) => row.completed_date));
+  const archivedDate = habit.archived_at ? habit.archived_at.slice(0, 10) : null;
+  const dates = Array.from({ length: 30 }, (_, index) => add(date, -index)).filter(
+    (value) => value >= habit.start_date,
+  );
+  const rate7 = Math.round(data.rate7.rate * 100);
+  const rate30 = Math.round(data.rate30.rate * 100);
+  const statusFor = (value: string) => {
+    if (archivedDate && value > archivedDate) return "예정 없음";
+    if (completed.has(value)) return "완료";
+    if (habit.schedule_type === "weekly_target") return "기록 없음";
+    if (habit.schedule_type === "specific_days" && !(habit.days_of_week ?? []).includes(dow(value)))
+      return "예정 없음";
+    return "미완료";
+  };
+  const recentRecords = [...rows].sort((a, b) => b.completed_date.localeCompare(a.completed_date));
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-semibold">{h.name}</h1>
-        <p className="text-muted-foreground">{formatHabitSchedule(h)}</p>
-        <p className="text-sm">시작일: {h.start_date}</p>
-        {h.archived_at && <span className="text-sm text-muted-foreground">Archived</span>}
+    <div className="space-y-8">
+      <Button asChild variant="ghost" className="-ml-3 min-h-11 px-3">
+        <Link href="/habits">
+          <ArrowLeft aria-hidden="true" />
+          Habits
+        </Link>
+      </Button>
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="break-words text-3xl font-semibold tracking-tight">{habit.name}</h1>
+          {habit.archived_at && (
+            <span className="rounded-md border px-2 py-1 text-xs font-medium">보관된 루틴</span>
+          )}
+        </div>
+        <p className="text-muted-foreground">{formatHabitSchedule(habit)}</p>
+        <p className="text-sm text-muted-foreground">시작일: {habit.start_date}</p>
+        {habit.archived_at && (
+          <p className="text-sm text-muted-foreground">이 루틴은 오늘 목록에 표시되지 않습니다.</p>
+        )}
       </header>
-      <section className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded border p-4">
-          {data.streakCount}
-          {unit} 연속
-        </div>
-        <div className="rounded border p-4">
-          최근 7일 {rate7}%
-          <div className="mt-2 h-2 rounded bg-muted">
-            <div
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={rate7}
-              aria-label={`${h.name} 최근 7일 달성률`}
-              className="h-2 rounded bg-primary"
-              style={{ width: `${rate7}%` }}
-            />
-          </div>
-        </div>
-        <div className="rounded border p-4">
-          최근 30일 {rate30}%
-          <div className="mt-2 h-2 rounded bg-muted">
-            <div
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={rate30}
-              aria-label={`${h.name} 최근 30일 달성률`}
-              className="h-2 rounded bg-primary"
-              style={{ width: `${rate30}%` }}
-            />
-          </div>
-        </div>
+      <section aria-label="루틴 요약" className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">현재 연속</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{data.streakCount}일</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">최근 7일</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{rate7}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">최근 30일</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{rate30}%</p>
+          </CardContent>
+        </Card>
       </section>
-      <section>
-        <h2 className="font-semibold">최근 30일</h2>
-        <ul className="mt-3 space-y-1 text-sm">
-          {dates.map((date) => {
-            const completed = done.has(date);
-            const scheduled =
-              h.schedule_type !== "specific_days" || (h.days_of_week ?? []).includes(dow(date));
-            const status = !scheduled ? "예정 없음" : completed ? "완료" : "미완료";
+      <section aria-labelledby="history-title" className="space-y-3">
+        <h2 id="history-title" className="font-semibold">
+          최근 30일
+        </h2>
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          {dates.map((value) => {
+            const status = statusFor(value);
             return (
-              <li key={date} className="rounded border p-2">
-                {date} · {status}
-              </li>
+              <div
+                key={value}
+                className="flex aspect-square min-w-0 flex-col items-center justify-center rounded-md border bg-card text-muted-foreground"
+              >
+                <span className="sr-only">
+                  {formatDate(value)} {status}
+                </span>
+                {status === "완료" ? (
+                  <Check aria-hidden="true" className="h-4 w-4 text-primary" />
+                ) : status === "미완료" ? (
+                  <Circle aria-hidden="true" className="h-4 w-4" />
+                ) : (
+                  <Minus aria-hidden="true" className="h-4 w-4" />
+                )}
+                <span aria-hidden="true" className="text-[10px]">
+                  {value.slice(8)}
+                </span>
+              </div>
             );
           })}
-        </ul>
+        </div>
+      </section>
+      <section aria-labelledby="records-title" className="space-y-3">
+        <h2 id="records-title" className="font-semibold">
+          최근 기록
+        </h2>
+        {recentRecords.length === 0 ? (
+          <EmptyState
+            title="아직 완료 기록이 없어요."
+            description={
+              habit.archived_at
+                ? "보관되기 전 등록된 완료 기록이 없습니다."
+                : "오늘부터 첫 기록을 만들어보세요."
+            }
+          />
+        ) : (
+          <ul className="divide-y rounded-xl border bg-card">
+            {recentRecords.map((row) => (
+              <li
+                key={row.completed_date}
+                className="flex items-center justify-between gap-3 p-3 text-sm"
+              >
+                <span>{formatDate(row.completed_date)}</span>
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Check aria-hidden="true" className="h-4 w-4 text-primary" />
+                  완료
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
