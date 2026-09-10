@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormMessage } from "@/components/form-message";
 
 type EditableHabit = Habit & { has_completions: boolean };
 
@@ -78,16 +79,12 @@ export function HabitActions({ habit }: { habit: EditableHabit }) {
         </div>
       )}
       {archiveState.message && (
-        <p
-          role={archiveState.status === "error" ? "alert" : "status"}
-          className={
-            archiveState.status === "error"
-              ? "mt-2 text-sm text-destructive"
-              : "mt-2 text-sm text-muted-foreground"
-          }
-        >
-          {archiveState.message}
-        </p>
+        <div className="mt-2">
+          <FormMessage
+            message={archiveState.message}
+            status={archiveState.status === "error" ? "error" : "success"}
+          />
+        </div>
       )}
     </>
   );

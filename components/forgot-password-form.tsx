@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useState } from "react";
+import { FormMessage } from "@/components/form-message";
 
 export function ForgotPasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
@@ -73,11 +74,7 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
-                {error && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {error}
-                  </p>
-                )}
+                <FormMessage message={error ?? ""} status="error" />
                 <Button type="submit" className="min-h-11 w-full" disabled={isLoading}>
                   {isLoading ? "전송 중..." : "재설정 링크 보내기"}
                 </Button>

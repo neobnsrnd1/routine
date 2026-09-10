@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormMessage } from "@/components/form-message";
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
@@ -79,11 +80,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              )}
+              <FormMessage message={error ?? ""} status="error" />
               <Button type="submit" className="min-h-11 w-full" disabled={isLoading}>
                 {isLoading ? "로그인 중..." : "로그인"}
               </Button>

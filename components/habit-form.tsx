@@ -5,6 +5,7 @@ import { createHabit, type CreateHabitState } from "@/lib/habits/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormMessage } from "@/components/form-message";
 
 const days = ["일", "월", "화", "수", "목", "금", "토"];
 const initialState: CreateHabitState = { status: "idle", message: "" };
@@ -98,16 +99,7 @@ function HabitFormFields({ state, formAction, pending }: HabitFormFieldsProps) {
           required
         />
       </div>
-      {state.message && (
-        <p
-          role={state.status === "error" ? "alert" : "status"}
-          className={
-            state.status === "error" ? "text-sm text-destructive" : "text-sm text-muted-foreground"
-          }
-        >
-          {state.message}
-        </p>
-      )}
+      <FormMessage message={state.message} status={state.status === "error" ? "error" : "success"} />
       <Button type="submit" disabled={pending}>
         {pending ? "저장 중..." : "습관 저장"}
       </Button>

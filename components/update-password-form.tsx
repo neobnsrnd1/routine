@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormMessage } from "@/components/form-message";
 
 export function UpdatePasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const [password, setPassword] = useState("");
@@ -55,11 +56,7 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              )}
+              <FormMessage message={error ?? ""} status="error" />
               <Button type="submit" className="min-h-11 w-full" disabled={isLoading}>
                 {isLoading ? "변경 중..." : "비밀번호 변경"}
               </Button>

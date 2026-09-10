@@ -8,6 +8,7 @@ import {
   type UpdateHabitState,
 } from "@/lib/habits/actions";
 import type { Habit } from "@/lib/habits/types";
+import { FormMessage } from "@/components/form-message";
 
 const initialState: UpdateHabitState = { status: "idle", message: "" };
 const initialArchiveState: ArchiveHabitState = { status: "idle", message: "" };
@@ -125,22 +126,11 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
           완료 기록이 있는 습관은 반복 설정을 변경할 수 없습니다.
         </p>
       )}
-      {state.message && (
-        <p
-          role={state.status === "error" ? "alert" : "status"}
-          className="text-sm text-muted-foreground"
-        >
-          {state.message}
-        </p>
-      )}
-      {archiveState.message && (
-        <p
-          role={archiveState.status === "error" ? "alert" : "status"}
-          className="text-sm text-muted-foreground"
-        >
-          {archiveState.message}
-        </p>
-      )}
+      <FormMessage message={state.message} status={state.status === "error" ? "error" : "success"} />
+      <FormMessage
+        message={archiveState.message}
+        status={archiveState.status === "error" ? "error" : "success"}
+      />
     </form>
   );
 }

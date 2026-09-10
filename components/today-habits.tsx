@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
+import { FormMessage } from "@/components/form-message";
 
 function localDate() {
   const d = new Date();
@@ -259,11 +260,7 @@ export function TodayHabits() {
                 );
               })}
             </ul>
-            {actionMessage && (
-              <p role="alert" className="text-sm text-destructive">
-                {actionMessage}
-              </p>
-            )}
+            <FormMessage message={actionMessage} status="error" />
           </section>
         </>
       )}

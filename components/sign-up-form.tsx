@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormMessage } from "@/components/form-message";
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
@@ -95,11 +96,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   onChange={(e) => setRepeatPassword(e.target.value)}
                 />
               </div>
-              {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              )}
+              <FormMessage message={error ?? ""} status="error" />
               <Button type="submit" className="min-h-11 w-full" disabled={isLoading}>
                 {isLoading ? "가입 중..." : "회원가입"}
               </Button>
