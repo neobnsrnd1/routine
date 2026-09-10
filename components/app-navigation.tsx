@@ -17,26 +17,39 @@ function isActive(pathname: string, href: string) {
     : pathname === href;
 }
 
-export function AppNavigation() {
-  const pathname = usePathname();
+function NavigationLinks({ pathname }: { pathname: string }) {
   return (
-    <nav
-      aria-label="주요 메뉴"
-      className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] supports-[backdrop-filter]:bg-background/80 supports-[backdrop-filter]:backdrop-blur sm:static sm:w-auto sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
-    >
+    <>
       {links.map(({ href, label }) => (
         <Link
           key={href}
           href={href}
           aria-current={isActive(pathname, href) ? "page" : undefined}
           className={cn(
-            "min-h-11 flex-1 rounded-md px-3 py-2 text-center text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9 sm:flex-none sm:px-4",
+            "rounded-md px-4 py-2 text-center text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             isActive(pathname, href) ? "bg-secondary text-foreground" : "text-muted-foreground",
           )}
         >
           {label}
         </Link>
       ))}
-    </nav>
+    </>
+  );
+}
+
+export function AppNavigation() {
+  const pathname = usePathname();
+  return (
+    <>
+      <nav aria-label="주요 메뉴" className="hidden items-center justify-center gap-1 sm:flex">
+        <NavigationLinks pathname={pathname} />
+      </nav>
+      <nav
+        aria-label="주요 메뉴"
+        className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] supports-[backdrop-filter]:bg-background/80 supports-[backdrop-filter]:backdrop-blur sm:hidden"
+      >
+        <NavigationLinks pathname={pathname} />
+      </nav>
+    </>
   );
 }
