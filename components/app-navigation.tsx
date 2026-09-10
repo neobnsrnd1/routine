@@ -37,19 +37,23 @@ function NavigationLinks({ pathname }: { pathname: string }) {
   );
 }
 
-export function AppNavigation() {
+export function DesktopNavigation() {
   const pathname = usePathname();
   return (
-    <>
-      <nav aria-label="주요 메뉴" className="hidden items-center justify-center gap-1 sm:flex">
-        <NavigationLinks pathname={pathname} />
-      </nav>
-      <nav
-        aria-label="주요 메뉴"
-        className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] supports-[backdrop-filter]:bg-background/80 supports-[backdrop-filter]:backdrop-blur sm:hidden"
-      >
-        <NavigationLinks pathname={pathname} />
-      </nav>
-    </>
+    <nav aria-label="주요 메뉴" className="hidden items-center justify-center gap-1 sm:flex">
+      <NavigationLinks pathname={pathname} />
+    </nav>
+  );
+}
+
+export function MobileNavigation() {
+  const pathname = usePathname();
+  return (
+    <nav
+      aria-label="주요 메뉴"
+      className="flex border-b bg-background/95 px-2 supports-[backdrop-filter]:bg-background/80 supports-[backdrop-filter]:backdrop-blur sm:hidden"
+    >
+      <NavigationLinks pathname={pathname} />
+    </nav>
   );
 }

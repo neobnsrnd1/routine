@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AppNavigation } from "@/components/app-navigation";
+import { DesktopNavigation } from "@/components/app-navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 export function AppHeader() {
@@ -13,7 +13,7 @@ export function AppHeader() {
           Routine
         </Link>
         <div className="flex-1 sm:flex sm:justify-center">
-          <AppNavigation />
+          <DesktopNavigation />
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <ThemeSwitcher />

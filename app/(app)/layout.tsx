@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { AppHeader } from "@/components/app-header";
 import { PageContainer } from "@/components/page-container";
 import { LoadingState } from "@/components/loading-state";
+import { MobileNavigation } from "@/components/app-navigation";
 async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   if (!hasEnvVars) redirect("/auth/login");
   const supabase = await createClient();
@@ -14,6 +15,7 @@ async function AuthenticatedLayout({ children }: { children: React.ReactNode }) 
   return (
     <AppShell>
       <AppHeader />
+      <MobileNavigation />
       <PageContainer>{children}</PageContainer>
     </AppShell>
   );

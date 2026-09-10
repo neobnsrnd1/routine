@@ -40,14 +40,13 @@ async function ActiveHabits() {
   );
 }
 
-export default async function HabitsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ create?: string }>;
-}) {
+async function HabitsContent({ searchParams }: { searchParams: Promise<{ create?: string }> }) {
   const params = await searchParams;
   return (
-    <HabitsPageContent initialOpen={params.create === "1"}>
+    <HabitsPageContent
+      key={params.create === "1" ? "create" : "closed"}
+      initialOpen={params.create === "1"}
+    >
       <Suspense
         fallback={
           <p role="status" className="text-sm text-muted-foreground">
@@ -58,5 +57,23 @@ export default async function HabitsPage({
         <ActiveHabits />
       </Suspense>
     </HabitsPageContent>
+  );
+}
+
+export default function HabitsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ create?: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <p role="status" className="text-sm text-muted-foreground">
+          루틴 화면을 불러오는 중...
+        </p>
+      }
+    >
+      <HabitsContent searchParams={searchParams} />
+    </Suspense>
   );
 }
