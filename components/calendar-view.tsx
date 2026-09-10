@@ -147,7 +147,7 @@ export function CalendarView() {
                   aria-current={isToday ? "date" : undefined}
                   aria-pressed={day ? isSelected : undefined}
                   className={
-                    "flex min-h-14 min-w-0 flex-col items-center justify-between rounded-md border p-1.5 sm:min-h-16 sm:p-2 " +
+                    "flex min-h-14 min-w-0 flex-col items-center justify-between rounded-md border p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-16 sm:p-2 " +
                     (isToday ? "border-primary font-semibold " : "") +
                     (isSelected ? "bg-accent ring-1 ring-ring" : "bg-card")
                   }

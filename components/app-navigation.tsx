@@ -17,7 +17,7 @@ function isActive(pathname: string, href: string) {
     : pathname === href;
 }
 
-function NavigationLinks({ pathname }: { pathname: string }) {
+function NavigationLinks({ pathname, mobile = false }: { pathname: string; mobile?: boolean }) {
   return (
     <>
       {links.map(({ href, label }) => (
@@ -26,7 +26,10 @@ function NavigationLinks({ pathname }: { pathname: string }) {
           href={href}
           aria-current={isActive(pathname, href) ? "page" : undefined}
           className={cn(
-            "rounded-md px-4 py-2 text-center text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            cn(
+              "rounded-md text-center text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              mobile ? "min-h-11 flex-1 px-2 py-3" : "px-4 py-2",
+            ),
             isActive(pathname, href) ? "bg-secondary text-foreground" : "text-muted-foreground",
           )}
         >
@@ -53,7 +56,7 @@ export function MobileNavigation() {
       aria-label="주요 메뉴"
       className="flex border-b bg-background/95 px-2 supports-[backdrop-filter]:bg-background/80 supports-[backdrop-filter]:backdrop-blur sm:hidden"
     >
-      <NavigationLinks pathname={pathname} />
+      <NavigationLinks pathname={pathname} mobile />
     </nav>
   );
 }
