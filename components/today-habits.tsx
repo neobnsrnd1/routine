@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CheckCircle2, Circle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { completeHabit, getTodayHabits, uncompleteHabit } from "@/lib/habits/completions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,21 +43,29 @@ export function TodayHabits() {
   const [actionMessage, setActionMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const pendingMutationRef = useRef(new Set<string>());
+  const loadRequestRef = useRef(0);
+  const displayedDateRef = useRef(date);
+  useLayoutEffect(() => {
+    displayedDateRef.current = date;
+  }, [date]);
 
   useEffect(() => {
+    const requestId = ++loadRequestRef.current;
     let active = true;
     const load = async () => {
       try {
         const r = await getTodayHabits(date);
-        if (!active) return;
+        if (!active || requestId !== loadRequestRef.current) return;
         if (r.success) {
           setHabits(r.habits);
           setMessage("");
         } else setMessage(r.message);
       } catch {
-        if (active) setMessage("오늘의 루틴을 불러오지 못했어요.");
+        if (active && requestId === loadRequestRef.current)
+          setMessage("오늘의 루틴을 불러오지 못했어요.");
       } finally {
-        if (active) setLoading(false);
+        if (active && requestId === loadRequestRef.current) setLoading(false);
       }
     };
     void load();
@@ -77,8 +85,9 @@ export function TodayHabits() {
   }, [date]);
 
   const toggle = (habit: TodayHabit) => {
-    if (pendingIds.has(habit.id)) return;
+    if (pendingMutationRef.current.has(habit.id)) return;
     setActionMessage("");
+    pendingMutationRef.current.add(habit.id);
     setPendingIds((current) => new Set(current).add(habit.id));
     const currentDate = localDate();
     if (currentDate !== date) {
@@ -89,8 +98,23 @@ export function TodayHabits() {
         next.delete(habit.id);
         return next;
       });
+      pendingMutationRef.current.delete(habit.id);
       return;
     }
+    const previousCompleted = habit.completed;
+    const rollback = () => {
+      if (currentDate !== displayedDateRef.current) return;
+      setHabits((current) =>
+        current.map((item) =>
+          item.id === habit.id ? { ...item, completed: previousCompleted } : item,
+        ),
+      );
+    };
+    setHabits((current) =>
+      current.map((item) =>
+        item.id === habit.id ? { ...item, completed: !previousCompleted } : item,
+      ),
+    );
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const request = habit.completed
       ? uncompleteHabit(habit.id, currentDate, zone)
@@ -98,20 +122,47 @@ export function TodayHabits() {
     request
       .then(async (result) => {
         if (!result.success) {
-          setActionMessage(result.message);
+          rollback();
+          if (currentDate === displayedDateRef.current) setActionMessage(result.message);
           return;
         }
-        const refreshed = await getTodayHabits(currentDate);
-        if (refreshed.success) setHabits(refreshed.habits);
-        else setActionMessage(refreshed.message);
       })
-      .catch(() => setActionMessage("완료 상태를 변경하지 못했어요. 다시 시도해 주세요."))
+      .catch(() => {
+        rollback();
+        if (currentDate !== displayedDateRef.current) return;
+        setActionMessage("완료 상태를 변경하지 못했어요. 다시 시도해 주세요.");
+      })
       .finally(() =>
-        setPendingIds((current) => {
-          const next = new Set(current);
-          next.delete(habit.id);
-          return next;
-        }),
+        {
+          pendingMutationRef.current.delete(habit.id);
+          setPendingIds((current) => {
+            const next = new Set(current);
+            next.delete(habit.id);
+            return next;
+          });
+
+          if (
+            pendingMutationRef.current.size === 0 &&
+            currentDate === displayedDateRef.current
+          ) {
+            const reconciliationId = ++loadRequestRef.current;
+            void getTodayHabits(currentDate).then((refreshed) => {
+              if (
+                reconciliationId !== loadRequestRef.current ||
+                currentDate !== displayedDateRef.current
+              )
+                return;
+              if (refreshed.success) setHabits(refreshed.habits);
+              else setActionMessage("변경사항은 저장됐지만 최신 상태를 다시 불러오지 못했어요.");
+            }).catch(() => {
+              if (
+                reconciliationId === loadRequestRef.current &&
+                currentDate === displayedDateRef.current
+              )
+                setActionMessage("변경사항은 저장됐지만 최신 상태를 다시 불러오지 못했어요.");
+            });
+          }
+        },
       );
   };
 
