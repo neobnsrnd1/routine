@@ -21,14 +21,23 @@ export function HabitList({ habits, showCompletion = false }: HabitListProps) {
     <ul className="divide-y rounded-xl border bg-card">
       {habits.map((habit) => (
         <li key={habit.id} className="flex flex-wrap items-center gap-3 p-5">
-          {showCompletion && (habit.completed
-            ? <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />
-            : <Circle aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground" />)}
+          {showCompletion &&
+            (habit.completed ? (
+              <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />
+            ) : (
+              <Circle aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground" />
+            ))}
           <div className="min-w-0 flex-1 basis-32">
-            <Link href={`/habits/${habit.id}`} className="break-words font-medium hover:underline">{habit.name}</Link>
+            <Link href={`/habits/${habit.id}`} className="break-words font-medium hover:underline">
+              {habit.name}
+            </Link>
             <p className="mt-1 text-sm text-muted-foreground">{habit.frequency}</p>
           </div>
-          {showCompletion && <Badge variant={habit.completed ? "secondary" : "outline"}>{habit.completed ? "완료" : "미완료"}</Badge>}
+          {showCompletion && (
+            <Badge variant={habit.completed ? "secondary" : "outline"}>
+              {habit.completed ? "완료" : "미완료"}
+            </Badge>
+          )}
           {habit.edit}
         </li>
       ))}

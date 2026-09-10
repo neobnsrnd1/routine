@@ -2,11 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { HabitDetail } from "@/components/habit-detail";
-async function HabitAccessGate({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+async function HabitAccessGate({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -22,11 +18,7 @@ async function HabitAccessGate({
   return <HabitDetail id={id} />;
 }
 
-export default function HabitDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function HabitDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <Suspense fallback={<p role="status">Loading...</p>}>
       <HabitAccessGate params={params} />

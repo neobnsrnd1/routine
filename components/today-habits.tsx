@@ -1,10 +1,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import {
-  completeHabit,
-  getTodayHabits,
-  uncompleteHabit,
-} from "@/lib/habits/completions";
+import { completeHabit, getTodayHabits, uncompleteHabit } from "@/lib/habits/completions";
 function localDate() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -99,8 +95,7 @@ export function TodayHabits() {
               {h.name}
               {h.weeklyTarget !== undefined && (
                 <span className="ml-2 text-sm text-muted-foreground">
-                  주 {h.weeklyTarget}회 · 이번 주 {h.weeklyCompletedCount}/
-                  {h.weeklyTarget}
+                  주 {h.weeklyTarget}회 · 이번 주 {h.weeklyCompletedCount}/{h.weeklyTarget}
                 </span>
               )}
               <span className="ml-2 text-sm text-muted-foreground">
@@ -113,9 +108,7 @@ export function TodayHabits() {
                 연속
               </span>
             </span>
-            <span className="text-sm text-muted-foreground">
-              {h.completed ? "완료" : "미완료"}
-            </span>
+            <span className="text-sm text-muted-foreground">{h.completed ? "완료" : "미완료"}</span>
           </li>
         ))}
       </ul>

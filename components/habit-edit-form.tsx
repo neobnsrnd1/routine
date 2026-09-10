@@ -22,12 +22,8 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
   );
   const locked = habit.has_completions;
   const [schedule, setSchedule] = useState(habit.schedule_type);
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
-    habit.days_of_week ?? [],
-  );
-  const [targetPerWeek, setTargetPerWeek] = useState(
-    habit.target_per_week ?? 3,
-  );
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(habit.days_of_week ?? []);
+  const [targetPerWeek, setTargetPerWeek] = useState(habit.target_per_week ?? 3);
   return (
     <form
       key={state.resetKey ?? habit.updated_at}
@@ -45,9 +41,7 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
       <select
         name="schedule_type"
         value={schedule}
-        onChange={(event) =>
-          setSchedule(event.target.value as EditableHabit["schedule_type"])
-        }
+        onChange={(event) => setSchedule(event.target.value as EditableHabit["schedule_type"])}
         disabled={locked}
         className="h-9 w-full rounded-md border px-3 text-sm"
       >
@@ -57,21 +51,13 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
       </select>
       {locked && (
         <>
-          <input
-            type="hidden"
-            name="schedule_type"
-            value={habit.schedule_type}
-          />
+          <input type="hidden" name="schedule_type" value={habit.schedule_type} />
           <input type="hidden" name="start_date" value={habit.start_date} />
           {(habit.days_of_week ?? []).map((day) => (
             <input key={day} type="hidden" name="days_of_week" value={day} />
           ))}
           {habit.target_per_week && (
-            <input
-              type="hidden"
-              name="target_per_week"
-              value={habit.target_per_week}
-            />
+            <input type="hidden" name="target_per_week" value={habit.target_per_week} />
           )}
         </>
       )}
@@ -120,11 +106,7 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
           ))}
         </select>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md border px-3 py-1.5 text-sm"
-      >
+      <button type="submit" disabled={pending} className="rounded-md border px-3 py-1.5 text-sm">
         {pending ? "저장 중..." : "수정 저장"}
       </button>
       <button
@@ -132,8 +114,7 @@ export function HabitEditForm({ habit }: { habit: EditableHabit }) {
         formAction={archiveAction}
         disabled={archivePending}
         onClick={(event) => {
-          if (!window.confirm("이 습관을 보관하시겠습니까?"))
-            event.preventDefault();
+          if (!window.confirm("이 습관을 보관하시겠습니까?")) event.preventDefault();
         }}
         className="rounded-md border px-3 py-1.5 text-sm text-destructive"
       >

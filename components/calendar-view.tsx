@@ -1,9 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import {
-  getCalendarMonth,
-  type CalendarCompletion,
-} from "@/lib/habits/calendar";
+import { getCalendarMonth, type CalendarCompletion } from "@/lib/habits/calendar";
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -44,10 +41,7 @@ export function CalendarView() {
     if (!year || !month) return [];
     const first = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7,
       count = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    return [
-      ...Array(first).fill(null),
-      ...Array.from({ length: count }, (_, i) => i + 1),
-    ];
+    return [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => i + 1)];
   }, [year, month]);
   const move = (n: number) => {
     const d = new Date(Date.UTC(year, month - 1 + n, 1));
@@ -93,9 +87,7 @@ export function CalendarView() {
               </div>
             ))}
             {cells.map((day, i) => {
-              const date = day
-                  ? `${year}-${pad(month)}-${pad(day)}`
-                  : `empty-${i}`,
+              const date = day ? `${year}-${pad(month)}-${pad(day)}` : `empty-${i}`,
                 items = day ? (days[date] ?? []) : [];
               return (
                 <button

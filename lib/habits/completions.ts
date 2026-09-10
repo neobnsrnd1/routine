@@ -4,17 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { Habit } from "./types";
 import { calculateHabitStreak } from "./streak";
 import { getAllCompletionRows } from "./completion-rows";
-const uuid =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const dateOk = (v: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
   const [y, m, d] = v.split("-").map(Number),
     x = new Date(Date.UTC(y, m - 1, d));
-  return (
-    x.getUTCFullYear() === y &&
-    x.getUTCMonth() === m - 1 &&
-    x.getUTCDate() === d
-  );
+  return x.getUTCFullYear() === y && x.getUTCMonth() === m - 1 && x.getUTCDate() === d;
 };
 const zoneDate = (z: string) => {
   try {
@@ -68,9 +63,7 @@ export async function getTodayHabits(date: string) {
     };
   const day = new Date(`${date}T00:00:00Z`).getUTCDay(),
     habits = data.filter(
-      (h) =>
-        h.schedule_type !== "specific_days" ||
-        (h.days_of_week ?? []).includes(day),
+      (h) => h.schedule_type !== "specific_days" || (h.days_of_week ?? []).includes(day),
     );
   const result = await getAllCompletionRows({
     supabase,
@@ -83,15 +76,10 @@ export async function getTodayHabits(date: string) {
       message: "오늘 습관을 불러오지 못했습니다.",
     };
   const history = result.rows,
-    todayDone = new Set(
-      history.filter((r) => r.completed_date === date).map((r) => r.habit_id),
-    );
-  const weekly = history.filter(
-    (r) => r.completed_date >= start && r.completed_date <= end,
-  );
+    todayDone = new Set(history.filter((r) => r.completed_date === date).map((r) => r.habit_id));
+  const weekly = history.filter((r) => r.completed_date >= start && r.completed_date <= end);
   const weeklyCount = new Map<string, number>();
-  for (const row of weekly)
-    weeklyCount.set(row.habit_id, (weeklyCount.get(row.habit_id) ?? 0) + 1);
+  for (const row of weekly) weeklyCount.set(row.habit_id, (weeklyCount.get(row.habit_id) ?? 0) + 1);
   return {
     success: true as const,
     habits: habits.map((h) => ({
@@ -99,21 +87,12 @@ export async function getTodayHabits(date: string) {
       completed: todayDone.has(h.id),
       streakCount: calculateHabitStreak(h, history, date),
       weeklyCompletedCount:
-        h.schedule_type === "weekly_target"
-          ? (weeklyCount.get(h.id) ?? 0)
-          : undefined,
-      weeklyTarget:
-        h.schedule_type === "weekly_target"
-          ? (h.target_per_week ?? 0)
-          : undefined,
+        h.schedule_type === "weekly_target" ? (weeklyCount.get(h.id) ?? 0) : undefined,
+      weeklyTarget: h.schedule_type === "weekly_target" ? (h.target_per_week ?? 0) : undefined,
     })),
   };
 }
-export async function completeHabit(
-  id: string,
-  date: string,
-  timezone: string,
-) {
+export async function completeHabit(id: string, date: string, timezone: string) {
   try {
     const { supabase, userId } = await auth(),
       today = zoneDate(timezone);
@@ -143,25 +122,21 @@ export async function completeHabit(
       };
     if (
       h.schedule_type === "specific_days" &&
-      !(h.days_of_week ?? []).includes(
-        new Date(`${date}T00:00:00Z`).getUTCDay(),
-      )
+      !(h.days_of_week ?? []).includes(new Date(`${date}T00:00:00Z`).getUTCDay())
     )
       return {
         success: false as const,
         message: "오늘 실행 대상이 아닌 습관입니다.",
       };
-    const { error } = await supabase
-      .from("habit_completions")
-      .upsert(
-        {
-          habit_id: id,
-          user_id: userId,
-          completed_date: date,
-          completed_timezone: timezone,
-        },
-        { onConflict: "habit_id,completed_date", ignoreDuplicates: true },
-      );
+    const { error } = await supabase.from("habit_completions").upsert(
+      {
+        habit_id: id,
+        user_id: userId,
+        completed_date: date,
+        completed_timezone: timezone,
+      },
+      { onConflict: "habit_id,completed_date", ignoreDuplicates: true },
+    );
     if (error)
       return {
         success: false as const,
@@ -177,11 +152,7 @@ export async function completeHabit(
     };
   }
 }
-export async function uncompleteHabit(
-  id: string,
-  date: string,
-  timezone: string,
-) {
+export async function uncompleteHabit(id: string, date: string, timezone: string) {
   try {
     const { supabase, userId } = await auth();
     if (

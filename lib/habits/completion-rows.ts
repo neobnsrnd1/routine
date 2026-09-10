@@ -16,8 +16,7 @@ type CompletionRowsParams = {
 };
 
 type CompletionRowsResult =
-  | { success: true; rows: CompletionRow[] }
-  | { success: false; error: unknown };
+  { success: true; rows: CompletionRow[] } | { success: false; error: unknown };
 
 export async function getAllCompletionRows({
   supabase,

@@ -7,11 +7,7 @@ const dateOk = (v: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
   const [y, m, d] = v.split("-").map(Number),
     x = new Date(Date.UTC(y, m - 1, d));
-  return (
-    x.getUTCFullYear() === y &&
-    x.getUTCMonth() === m - 1 &&
-    x.getUTCDate() === d
-  );
+  return x.getUTCFullYear() === y && x.getUTCMonth() === m - 1 && x.getUTCDate() === d;
 };
 const add = (v: string, n: number) => {
   const d = new Date(`${v}T00:00:00Z`);
@@ -30,17 +26,8 @@ const zoneDate = (z: string) => {
     return null;
   }
 };
-export async function getHabitDetail(
-  id: string,
-  date: string,
-  timezone: string,
-) {
-  if (
-    !dateOk(date) ||
-    !timezone.trim() ||
-    timezone.length > 100 ||
-    zoneDate(timezone) !== date
-  )
+export async function getHabitDetail(id: string, date: string, timezone: string) {
+  if (!dateOk(date) || !timezone.trim() || timezone.length > 100 || zoneDate(timezone) !== date)
     return {
       success: false as const,
       message: "습관 상세 정보를 불러오지 못했습니다.",

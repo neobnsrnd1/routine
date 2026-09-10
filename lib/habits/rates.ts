@@ -15,15 +15,8 @@ function weeks(start: string, end: string) {
   }
   return out;
 }
-export function completionRate(
-  h: Habit,
-  rows: Completion[],
-  start: string,
-  end: string,
-) {
-  const done = new Set(
-    rows.filter((r) => r.habit_id === h.id).map((r) => r.completed_date),
-  );
+export function completionRate(h: Habit, rows: Completion[], start: string, end: string) {
+  const done = new Set(rows.filter((r) => r.habit_id === h.id).map((r) => r.completed_date));
   if (h.schedule_type === "weekly_target") {
     const target = h.target_per_week ?? 0;
     let n = 0,
@@ -33,13 +26,7 @@ export function completionRate(
       let count = 0;
       for (let i = 0; i < 7; i++) {
         const date = add(w.start, i);
-        if (
-          date >= start &&
-          date <= end &&
-          date >= h.start_date &&
-          done.has(date)
-        )
-          count++;
+        if (date >= start && date <= end && date >= h.start_date && done.has(date)) count++;
       }
       n += Math.min(count, target);
       d += target;
@@ -51,8 +38,7 @@ export function completionRate(
   for (let date = start; date <= end; date = add(date, 1)) {
     if (
       date < h.start_date ||
-      (h.schedule_type === "specific_days" &&
-        !(h.days_of_week ?? []).includes(dow(date)))
+      (h.schedule_type === "specific_days" && !(h.days_of_week ?? []).includes(dow(date)))
     )
       continue;
     total++;

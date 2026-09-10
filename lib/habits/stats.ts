@@ -4,17 +4,12 @@ import type { Habit } from "./types";
 import { calculateHabitStreak } from "./streak";
 import { completionRate } from "./rates";
 import { getAllCompletionRows } from "./completion-rows";
-const message =
-  "\ud1b5\uacc4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.";
+const message = "\ud1b5\uacc4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.";
 const validDate = (v: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
   const [y, m, d] = v.split("-").map(Number),
     x = new Date(Date.UTC(y, m - 1, d));
-  return (
-    x.getUTCFullYear() === y &&
-    x.getUTCMonth() === m - 1 &&
-    x.getUTCDate() === d
-  );
+  return x.getUTCFullYear() === y && x.getUTCMonth() === m - 1 && x.getUTCDate() === d;
 };
 const zoneDate = (z: string) => {
   try {
@@ -35,17 +30,8 @@ const add = (v: string, n: number) => {
 };
 function schedule(h: Habit) {
   if (h.schedule_type === "daily") return "\ub9e4\uc77c";
-  if (h.schedule_type === "weekly_target")
-    return `\uc8fc ${h.target_per_week}\ud68c`;
-  const names = [
-    "\uc77c",
-    "\uc6d4",
-    "\ud654",
-    "\uc218",
-    "\ubaa9",
-    "\uae08",
-    "\ud1a0",
-  ];
+  if (h.schedule_type === "weekly_target") return `\uc8fc ${h.target_per_week}\ud68c`;
+  const names = ["\uc77c", "\uc6d4", "\ud654", "\uc218", "\ubaa9", "\uae08", "\ud1a0"];
   return (h.days_of_week ?? [])
     .sort((a, b) => a - b)
     .map((d) => names[d])
@@ -75,10 +61,7 @@ export async function getStats(today: string, timezone: string) {
       .returns<Habit[]>();
     if (error || !habits) return { success: false as const, message };
     const periodStart = add(today, -29),
-      historyStart = habits.reduce(
-        (min, h) => (h.start_date < min ? h.start_date : min),
-        today,
-      ),
+      historyStart = habits.reduce((min, h) => (h.start_date < min ? h.start_date : min), today),
       ids = habits.map((h) => h.id);
     const result = await getAllCompletionRows({
       supabase,
@@ -87,12 +70,9 @@ export async function getStats(today: string, timezone: string) {
       startDate: historyStart,
       endDate: today,
     });
-    if (!result.success)
-      return { success: false as const, message };
+    if (!result.success) return { success: false as const, message };
     const rows = result.rows,
-      todaySet = new Set(
-        rows.filter((r) => r.completed_date === today).map((r) => r.habit_id),
-      ),
+      todaySet = new Set(rows.filter((r) => r.completed_date === today).map((r) => r.habit_id)),
       recent7 = add(today, -6),
       activity = Array.from({ length: 7 }, (_, i) => {
         const date = add(recent7, i);
@@ -122,9 +102,7 @@ export async function getStats(today: string, timezone: string) {
       success: true as const,
       activeCount: habits.length,
       completedToday: cards.filter((c) => c.completedToday).length,
-      averageRate: rates.length
-        ? rates.reduce((a, b) => a + b, 0) / rates.length
-        : 0,
+      averageRate: rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0,
       last30Count: rows.filter((r) => r.completed_date >= periodStart).length,
       activity,
       cards,

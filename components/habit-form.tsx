@@ -15,10 +15,7 @@ function localToday() {
 }
 
 export function HabitForm() {
-  const [state, formAction, pending] = useActionState(
-    createHabit,
-    initialState,
-  );
+  const [state, formAction, pending] = useActionState(createHabit, initialState);
 
   return (
     <HabitFormFields
@@ -41,19 +38,10 @@ function HabitFormFields({ state, formAction, pending }: HabitFormFieldsProps) {
   const [startDate, setStartDate] = useState(localToday);
 
   return (
-    <form
-      action={formAction}
-      className="space-y-5 rounded-xl border bg-card p-5"
-    >
+    <form action={formAction} className="space-y-5 rounded-xl border bg-card p-5">
       <div className="space-y-2">
         <Label htmlFor="habit-name">습관 이름</Label>
-        <Input
-          id="habit-name"
-          name="name"
-          maxLength={100}
-          required
-          placeholder="예: 아침 산책"
-        />
+        <Input id="habit-name" name="name" maxLength={100} required placeholder="예: 아침 산책" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="schedule-type">반복 방식</Label>
@@ -114,9 +102,7 @@ function HabitFormFields({ state, formAction, pending }: HabitFormFieldsProps) {
         <p
           role={state.status === "error" ? "alert" : "status"}
           className={
-            state.status === "error"
-              ? "text-sm text-destructive"
-              : "text-sm text-muted-foreground"
+            state.status === "error" ? "text-sm text-destructive" : "text-sm text-muted-foreground"
           }
         >
           {state.message}

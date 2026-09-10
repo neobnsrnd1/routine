@@ -29,11 +29,7 @@ export function HabitDetail({ id }: Props) {
   const requestKey = `${id}:${date}`;
   useEffect(() => {
     let active = true;
-    getHabitDetail(
-      id,
-      date,
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-    ).then((r) => {
+    getHabitDetail(id, date, Intl.DateTimeFormat().resolvedOptions().timeZone).then((r) => {
       if (!active) return;
       if (r.success) setData(r);
       else setError({ key: requestKey, message: r.message });
@@ -64,20 +60,14 @@ export function HabitDetail({ id }: Props) {
     if (date >= h.start_date) dates.push(date);
   }
   const unit =
-    h.schedule_type === "daily"
-      ? "일"
-      : h.schedule_type === "weekly_target"
-        ? "주"
-        : "회";
+    h.schedule_type === "daily" ? "일" : h.schedule_type === "weekly_target" ? "주" : "회";
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-semibold">{h.name}</h1>
         <p className="text-muted-foreground">{formatHabitSchedule(h)}</p>
         <p className="text-sm">시작일: {h.start_date}</p>
-        {h.archived_at && (
-          <span className="text-sm text-muted-foreground">Archived</span>
-        )}
+        {h.archived_at && <span className="text-sm text-muted-foreground">Archived</span>}
       </header>
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded border p-4">
@@ -119,13 +109,8 @@ export function HabitDetail({ id }: Props) {
           {dates.map((date) => {
             const completed = done.has(date);
             const scheduled =
-              h.schedule_type !== "specific_days" ||
-              (h.days_of_week ?? []).includes(dow(date));
-            const status = !scheduled
-              ? "예정 없음"
-              : completed
-                ? "완료"
-                : "미완료";
+              h.schedule_type !== "specific_days" || (h.days_of_week ?? []).includes(dow(date));
+            const status = !scheduled ? "예정 없음" : completed ? "완료" : "미완료";
             return (
               <li key={date} className="rounded border p-2">
                 {date} · {status}

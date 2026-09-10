@@ -17,11 +17,7 @@ async function ActiveHabits() {
   }
 
   if (result.habits.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        아직 등록한 습관이 없습니다.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">아직 등록한 습관이 없습니다.</p>;
   }
 
   return (
@@ -41,9 +37,7 @@ export default function HabitsPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">My Habits</h1>
-        <p className="text-muted-foreground">
-          꾸준히 이어갈 나만의 습관을 모아보세요.
-        </p>
+        <p className="text-muted-foreground">꾸준히 이어갈 나만의 습관을 모아보세요.</p>
       </div>
       <HabitForm />
       <Suspense

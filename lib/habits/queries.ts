@@ -20,14 +20,19 @@ export async function getActiveHabits(): Promise<HabitsResult> {
 
     const { data, error } = await supabase
       .from("habits")
-      .select("id, user_id, name, schedule_type, days_of_week, target_per_week, start_date, archived_at, created_at, updated_at")
+      .select(
+        "id, user_id, name, schedule_type, days_of_week, target_per_week, start_date, archived_at, created_at, updated_at",
+      )
       .eq("user_id", userId)
       .is("archived_at", null)
       .order("created_at", { ascending: true })
       .returns<Habit[]>();
 
     if (error || data === null) {
-      return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
+      return {
+        success: false,
+        message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      };
     }
 
     const habitIds = data.map((habit) => habit.id);
@@ -38,12 +43,21 @@ export async function getActiveHabits(): Promise<HabitsResult> {
     });
 
     if (!completions.success) {
-      return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
+      return {
+        success: false,
+        message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      };
     }
 
     const completedHabitIds = new Set(completions.rows.map((completion) => completion.habit_id));
-    return { success: true, habits: data.map((habit) => ({ ...habit, has_completions: completedHabitIds.has(habit.id) })) };
+    return {
+      success: true,
+      habits: data.map((habit) => ({ ...habit, has_completions: completedHabitIds.has(habit.id) })),
+    };
   } catch {
-    return { success: false, message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
+    return {
+      success: false,
+      message: "습관 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    };
   }
 }

@@ -41,11 +41,7 @@ export async function getCalendarMonth(year: number, month: number) {
     const rows = completionRows.rows;
     const ids = [...new Set(rows.map((r) => r.habit_id))];
     const { data: habits, error: habitError } = ids.length
-      ? await supabase
-          .from("habits")
-          .select("id,name")
-          .eq("user_id", userId)
-          .in("id", ids)
+      ? await supabase.from("habits").select("id,name").eq("user_id", userId).in("id", ids)
       : { data: [] as { id: string; name: string }[], error: null };
     if (habitError || !habits)
       return {
@@ -56,8 +52,7 @@ export async function getCalendarMonth(year: number, month: number) {
     const days: Record<string, CalendarCompletion[]> = {};
     for (const row of rows) {
       const name = names.get(row.habit_id);
-      if (name)
-        (days[row.completed_date] ??= []).push({ habitId: row.habit_id, name });
+      if (name) (days[row.completed_date] ??= []).push({ habitId: row.habit_id, name });
     }
     return { success: true as const, days };
   } catch (error) {

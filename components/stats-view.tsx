@@ -30,13 +30,11 @@ export function StatsView() {
   const [error, setError] = useState<ErrorState>(null);
   useEffect(() => {
     let active = true;
-    getStats(date, Intl.DateTimeFormat().resolvedOptions().timeZone).then(
-      (r) => {
-        if (!active) return;
-        if (r.success) setData(r);
-        else setError({ key: date, message: r.message });
-      },
-    );
+    getStats(date, Intl.DateTimeFormat().resolvedOptions().timeZone).then((r) => {
+      if (!active) return;
+      if (r.success) setData(r);
+      else setError({ key: date, message: r.message });
+    });
     return () => {
       active = false;
     };
@@ -73,10 +71,7 @@ export function StatsView() {
         <h2 className="mb-3 font-semibold">Recent 7 days</h2>
         <div className="grid grid-cols-7 gap-2">
           {data.activity.map((item) => (
-            <div
-              key={item.date}
-              className="rounded border p-2 text-center text-xs"
-            >
+            <div key={item.date} className="rounded border p-2 text-center text-xs">
               <div>{item.date.slice(5)}</div>
               <strong>{item.count}</strong>
             </div>
@@ -98,9 +93,7 @@ export function StatsView() {
                   : "회"}{" "}
               연속
             </p>
-            <p className="mt-2 text-sm">
-              최근 7일 {Math.round(card.rate7 * 100)}%
-            </p>
+            <p className="mt-2 text-sm">최근 7일 {Math.round(card.rate7 * 100)}%</p>
             <div className="mt-1 h-2 rounded bg-muted">
               <div
                 role="progressbar"
@@ -112,9 +105,7 @@ export function StatsView() {
                 style={{ width: `${Math.round(card.rate7 * 100)}%` }}
               />
             </div>
-            <p className="mt-2 text-sm">
-              최근 30일 {Math.round(card.rate30 * 100)}%
-            </p>
+            <p className="mt-2 text-sm">최근 30일 {Math.round(card.rate30 * 100)}%</p>
             <div className="mt-1 h-2 rounded bg-muted">
               <div
                 role="progressbar"
