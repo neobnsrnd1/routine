@@ -1,2 +1,3 @@
 import { StatsView } from "@/components/stats-view";
-export default function StatsPage(){return <div className="space-y-8"><div><h1 className="text-3xl font-semibold">Stats</h1><p className="text-muted-foreground">Habit progress overview.</p></div><StatsView /></div>;}
+import { PageHeader } from "@/components/page-header";
+export default function StatsPage(){return <div className="space-y-8"><PageHeader title="Stats" description="루틴 달성률과 진행 상황을 확인하세요." /><StatsView /></div>;}
