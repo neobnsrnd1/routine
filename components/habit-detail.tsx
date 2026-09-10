@@ -97,7 +97,7 @@ export function HabitDetail({ id }: { id: string }) {
           Habits
         </Link>
       </Button>
-      <header className="space-y-2">
+      <header className="space-y-3 rounded-xl border bg-card p-5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="break-words text-3xl font-semibold tracking-tight">{habit.name}</h1>
           {habit.archived_at && (
@@ -107,7 +107,7 @@ export function HabitDetail({ id }: { id: string }) {
         <p className="text-muted-foreground">{formatHabitSchedule(habit)}</p>
         <p className="text-sm text-muted-foreground">시작일: {habit.start_date}</p>
         {habit.archived_at && (
-          <p className="text-sm text-muted-foreground">이 루틴은 오늘 목록에 표시되지 않습니다.</p>
+          <p className="text-sm text-muted-foreground">기존 완료 기록은 유지되지만 Today에는 더 이상 표시되지 않아요.</p>
         )}
       </header>
       <section aria-label="루틴 요약" className="grid gap-3 sm:grid-cols-3">
