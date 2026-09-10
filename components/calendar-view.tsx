@@ -103,19 +103,15 @@ export function CalendarView() {
                   type="button"
                   disabled={!day}
                   onClick={() => day && setSelected(date)}
-                  className={`min-h-20 rounded-md border p-2 text-left ${date === today() ? "border-primary font-semibold" : ""} ${date === selected ? "bg-accent" : ""}`}
+                  className={`flex min-h-16 min-w-0 flex-col items-start justify-between rounded-md border p-2 text-left whitespace-nowrap ${date === today() ? "border-primary bg-primary/10 font-semibold" : ""} ${date === selected ? "bg-accent ring-1 ring-ring" : ""}`}
                 >
                   {day && (
                     <>
                       <span>{day}</span>
                       {items.length > 0 && (
-                        <span className="mt-2 block text-xs">
-                          {items.length} done
-                        </span>
-                      )}
-                      {date === today() && (
-                        <span className="block text-xs text-primary">
-                          Today
+                        <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-chart-1">
+                          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+                          {items.length}
                         </span>
                       )}
                     </>
@@ -126,7 +122,7 @@ export function CalendarView() {
           </div>
           <section className="rounded-xl border bg-card p-5">
             <h3 className="font-medium">{selected}</h3>
-            <p className="mt-1 text-sm">Completed {records.length}</p>
+            <p className="mt-1 text-sm">완료 {records.length}</p>
             {records.length ? (
               <ul className="mt-3 list-disc pl-5 text-sm">
                 {records.map((r) => (
@@ -134,7 +130,7 @@ export function CalendarView() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm">No records.</p>
+              <p className="mt-3 text-sm">완료 기록이 없습니다.</p>
             )}
           </section>
         </>
