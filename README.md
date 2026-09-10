@@ -42,31 +42,31 @@ Weekly Target은 특정 날짜를 자동으로 미완료로 해석하는 방식�
 
 ### Public
 
-| Route | Description |
-| --- | --- |
-| `/` | 서비스 소개 및 진입 화면 |
+| Route | Description              |
+| ----- | ------------------------ |
+| `/`   | 서비스 소개 및 진입 화면 |
 
 ### Auth
 
-| Route | Description |
-| --- | --- |
-| `/auth/login` | 로그인 |
-| `/auth/sign-up` | 회원가입 |
-| `/auth/forgot-password` | 비밀번호 재설정 링크 요청 |
-| `/auth/update-password` | 새 비밀번호 설정 |
-| `/auth/sign-up-success` | 회원가입 확인 안내 |
-| `/auth/error` | 인증 오류 안내 |
-| `/auth/confirm` | 이메일 인증 callback route |
+| Route                   | Description                |
+| ----------------------- | -------------------------- |
+| `/auth/login`           | 로그인                     |
+| `/auth/sign-up`         | 회원가입                   |
+| `/auth/forgot-password` | 비밀번호 재설정 링크 요청  |
+| `/auth/update-password` | 새 비밀번호 설정           |
+| `/auth/sign-up-success` | 회원가입 확인 안내         |
+| `/auth/error`           | 인증 오류 안내             |
+| `/auth/confirm`         | 이메일 인증 callback route |
 
 ### Authenticated
 
-| Route | Description |
-| --- | --- |
-| `/dashboard` | 오늘의 루틴 |
-| `/habits` | 루틴 생성 및 관리 |
+| Route          | Description            |
+| -------------- | ---------------------- |
+| `/dashboard`   | 오늘의 루틴            |
+| `/habits`      | 루틴 생성 및 관리      |
 | `/habits/[id]` | 루틴 상세 및 완료 기록 |
-| `/calendar` | 월별 완료 기록 |
-| `/stats` | 루틴 통계 |
+| `/calendar`    | 월별 완료 기록         |
+| `/stats`       | 루틴 통계              |
 
 ## Project Structure
 
@@ -219,4 +219,3 @@ npm run build
 현재 버전: **V1.1**
 
 V1.1 UI/UX 개선 및 release QA를 완료했습니다.
-
