@@ -248,9 +248,9 @@ V1.1은 UI/UX release이며 authentication flow, database schema, Supabase query
 
 ## Known Issues
 
-- `/habits?create=1`로 생성 form을 연 뒤 닫아도 query parameter가 URL에 남을 수 있습니다.
-- `archived_at.slice(0, 10)` 기반 날짜 비교는 timestamp timezone 경계에서 개선 여지가 있습니다.
-- `lib/demo-habits.ts`는 현재 사용처가 확인되지 않는 유지보수 대상 파일입니다.
+현재 확인된 user-facing Known Issue는 없습니다.
+
+`lib/demo-habits.ts`는 production import가 없는 maintenance backlog 파일입니다.
 
 ## Development
 
@@ -289,6 +289,6 @@ npm run build
 
 ## Status
 
-현재 버전: **V1.2**
+현재 버전: **V1.3**
 
-V1.2 Product Polish 및 Final Audit를 완료했습니다.
+V1.3 Known Issue Cleanup 및 Runtime & Accessibility Audit를 완료했습니다.
