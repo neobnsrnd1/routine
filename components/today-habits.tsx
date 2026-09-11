@@ -278,7 +278,10 @@ export function TodayHabits() {
                     <button
                       type="button"
                       onClick={() => toggle(habit)}
-                      disabled={pending || notePendingId === habit.completionId}
+                      disabled={
+                        pending ||
+                        (habit.completionId !== null && notePendingId === habit.completionId)
+                      }
                       aria-label={`${habit.name} ${habit.completed ? "완료 취소" : "완료 처리"}`}
                       aria-pressed={habit.completed}
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
