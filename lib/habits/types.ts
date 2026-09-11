@@ -12,3 +12,16 @@ export type Habit = {
   created_at: string;
   updated_at: string;
 };
+
+export type CompletionNote = {
+  completion_id: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CompletionHistoryRow = {
+  completion_id: string;
+  completed_date: string;
+  note: CompletionNote | null;
+};

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckCircle2, Circle } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { completeHabit, getTodayHabits, uncompleteHabit } from "@/lib/habits/completions";
+import { createCompletionNote, updateCompletionNote } from "@/lib/habits/note-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
@@ -30,6 +31,8 @@ type TodayHabit = {
   schedule_type: string;
   streakCount: number;
   weeklyTarget?: number;
+  completionId: string | null;
+  note: { note: string; updated_at: string } | null;
 };
 function scheduleLabel(habit: TodayHabit) {
   if (habit.schedule_type === "weekly_target") return `주 ${habit.weeklyTarget ?? 0}회 목표`;
@@ -44,6 +47,11 @@ export function TodayHabits() {
   const [actionMessage, setActionMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [editingCompletionId, setEditingCompletionId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [notePendingId, setNotePendingId] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState("");
+  const noteTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingMutationRef = useRef(new Set<string>());
   const loadRequestRef = useRef(0);
   const displayedDateRef = useRef(date);
@@ -60,6 +68,7 @@ export function TodayHabits() {
         if (!active || requestId !== loadRequestRef.current) return;
         if (r.success) {
           setHabits(r.habits);
+          setEditingCompletionId(null);
           setMessage("");
         } else setMessage(r.message);
       } catch {
@@ -74,6 +83,43 @@ export function TodayHabits() {
       active = false;
     };
   }, [date]);
+  const closeEditor = () => {
+    const id = editingCompletionId;
+    setEditingCompletionId(null);
+    setNoteDraft("");
+    setNoteError("");
+    if (id) requestAnimationFrame(() => noteTriggerRefs.current[id]?.focus());
+  };
+  const openEditor = (habit: TodayHabit) => {
+    if (!habit.completionId) return;
+    setEditingCompletionId(habit.completionId);
+    setNoteDraft(habit.note?.note ?? "");
+    setNoteError("");
+  };
+  const saveNote = async (habit: TodayHabit) => {
+    if (!habit.completionId || notePendingId) return;
+    setNotePendingId(habit.completionId);
+    setNoteError("");
+    try {
+      const result = habit.note
+        ? await updateCompletionNote(habit.completionId, noteDraft)
+        : await createCompletionNote(habit.completionId, noteDraft);
+      if (result.success) {
+        setHabits((current) =>
+          current.map((item) =>
+            item.id === habit.id
+              ? { ...item, note: { note: noteDraft.trim(), updated_at: new Date().toISOString() } }
+              : item,
+          ),
+        );
+        closeEditor();
+      } else setNoteError(result.message);
+    } catch {
+      setNoteError("메모 저장에 실패했습니다. 다시 시도해 주세요.");
+    } finally {
+      setNotePendingId(null);
+    }
+  };
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible" && localDate() !== date) {
@@ -111,6 +157,7 @@ export function TodayHabits() {
         ),
       );
     };
+    if (habit.completed && editingCompletionId === habit.completionId) closeEditor();
     setHabits((current) =>
       current.map((item) =>
         item.id === habit.id ? { ...item, completed: !previousCompleted } : item,
@@ -133,21 +180,18 @@ export function TodayHabits() {
         if (currentDate !== displayedDateRef.current) return;
         setActionMessage("완료 상태를 변경하지 못했어요. 다시 시도해 주세요.");
       })
-      .finally(() =>
-        {
-          pendingMutationRef.current.delete(habit.id);
-          setPendingIds((current) => {
-            const next = new Set(current);
-            next.delete(habit.id);
-            return next;
-          });
+      .finally(() => {
+        pendingMutationRef.current.delete(habit.id);
+        setPendingIds((current) => {
+          const next = new Set(current);
+          next.delete(habit.id);
+          return next;
+        });
 
-          if (
-            pendingMutationRef.current.size === 0 &&
-            currentDate === displayedDateRef.current
-          ) {
-            const reconciliationId = ++loadRequestRef.current;
-            void getTodayHabits(currentDate).then((refreshed) => {
+        if (pendingMutationRef.current.size === 0 && currentDate === displayedDateRef.current) {
+          const reconciliationId = ++loadRequestRef.current;
+          void getTodayHabits(currentDate)
+            .then((refreshed) => {
               if (
                 reconciliationId !== loadRequestRef.current ||
                 currentDate !== displayedDateRef.current
@@ -155,16 +199,16 @@ export function TodayHabits() {
                 return;
               if (refreshed.success) setHabits(refreshed.habits);
               else setActionMessage("변경사항은 저장됐지만 최신 상태를 다시 불러오지 못했어요.");
-            }).catch(() => {
+            })
+            .catch(() => {
               if (
                 reconciliationId === loadRequestRef.current &&
                 currentDate === displayedDateRef.current
               )
                 setActionMessage("변경사항은 저장됐지만 최신 상태를 다시 불러오지 못했어요.");
             });
-          }
-        },
-      );
+        }
+      });
   };
 
   if (loading) return <LoadingState label="오늘의 루틴을 불러오는 중..." />;
@@ -234,7 +278,7 @@ export function TodayHabits() {
                     <button
                       type="button"
                       onClick={() => toggle(habit)}
-                      disabled={pending}
+                      disabled={pending || notePendingId === habit.completionId}
                       aria-label={`${habit.name} ${habit.completed ? "완료 취소" : "완료 처리"}`}
                       aria-pressed={habit.completed}
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
@@ -255,6 +299,79 @@ export function TodayHabits() {
                         <span>{scheduleLabel(habit)}</span>
                         {habit.streakCount > 0 && <span>{habit.streakCount}일 연속</span>}
                       </div>
+                      {habit.completed && habit.completionId && (
+                        <div className="mt-2 space-y-2">
+                          {habit.note && editingCompletionId !== habit.completionId && (
+                            <p className="line-clamp-2 break-words text-sm text-muted-foreground">
+                              {habit.note.note}
+                            </p>
+                          )}
+                          {editingCompletionId !== habit.completionId && (
+                            <button
+                              ref={(element) => {
+                                noteTriggerRefs.current[habit.completionId!] = element;
+                              }}
+                              type="button"
+                              onClick={() => openEditor(habit)}
+                              className="min-h-11 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {habit.note ? "수정" : "메모 추가"}
+                            </button>
+                          )}
+                          {editingCompletionId === habit.completionId && (
+                            <div className="space-y-2">
+                              <textarea
+                                autoFocus
+                                value={noteDraft}
+                                onChange={(event) =>
+                                  setNoteDraft(
+                                    Array.from(event.target.value).slice(0, 1000).join(""),
+                                  )
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Escape" && !notePendingId) closeEditor();
+                                }}
+                                aria-label={`${habit.name} 메모`}
+                                aria-describedby={noteError ? `note-error-${habit.id}` : undefined}
+                                className="min-h-24 w-full resize-y rounded-md border bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              />
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                                <span>{Array.from(noteDraft).length} / 1000</span>
+                                {noteError && (
+                                  <span
+                                    id={`note-error-${habit.id}`}
+                                    role="alert"
+                                    className="text-destructive"
+                                  >
+                                    {noteError}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => void saveNote(habit)}
+                                  disabled={
+                                    notePendingId === habit.completionId || !noteDraft.trim()
+                                  }
+                                >
+                                  {notePendingId === habit.completionId ? "저장 중..." : "저장"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={closeEditor}
+                                  disabled={notePendingId === habit.completionId}
+                                >
+                                  취소
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );

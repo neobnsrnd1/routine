@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Habit } from "./types";
 import { calculateHabitStreak } from "./streak";
 import { getAllCompletionRows } from "./completion-rows";
+import { getTodayCompletionNotes } from "./notes";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const dateOk = (v: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
@@ -65,6 +66,7 @@ export async function getTodayHabits(date: string) {
     habits = data.filter(
       (h) => h.schedule_type !== "specific_days" || (h.days_of_week ?? []).includes(day),
     );
+  if (habits.length === 0) return { success: true as const, habits: [] };
   const result = await getAllCompletionRows({
     supabase,
     userId,
@@ -77,6 +79,28 @@ export async function getTodayHabits(date: string) {
     };
   const history = result.rows,
     todayDone = new Set(history.filter((r) => r.completed_date === date).map((r) => r.habit_id));
+  const todayNotes = await getTodayCompletionNotes(
+    habits.map((h) => h.id),
+    date,
+    userId,
+  );
+  if (!todayNotes.success)
+    return { success: false as const, message: "오늘 습관을 불러오지 못했습니다." };
+  const notesByCompletion = new Map(todayNotes.rows.map((note) => [note.completion_id, note]));
+  const { data: todayCompletions, error: todayCompletionError } = await supabase
+    .from("habit_completions")
+    .select("id, habit_id")
+    .eq("user_id", userId)
+    .in(
+      "habit_id",
+      habits.map((h) => h.id),
+    )
+    .eq("completed_date", date);
+  if (todayCompletionError || !todayCompletions)
+    return { success: false as const, message: "오늘 습관을 불러오지 못했습니다." };
+  const completionByHabit = new Map(
+    todayCompletions.map((completion) => [completion.habit_id, completion.id]),
+  );
   const weekly = history.filter((r) => r.completed_date >= start && r.completed_date <= end);
   const weeklyCount = new Map<string, number>();
   for (const row of weekly) weeklyCount.set(row.habit_id, (weeklyCount.get(row.habit_id) ?? 0) + 1);
@@ -89,6 +113,11 @@ export async function getTodayHabits(date: string) {
       weeklyCompletedCount:
         h.schedule_type === "weekly_target" ? (weeklyCount.get(h.id) ?? 0) : undefined,
       weeklyTarget: h.schedule_type === "weekly_target" ? (h.target_per_week ?? 0) : undefined,
+      completionId: completionByHabit.get(h.id) ?? null,
+      note: (() => {
+        const completionId = completionByHabit.get(h.id);
+        return completionId ? (notesByCompletion.get(completionId) ?? null) : null;
+      })(),
     })),
   };
 }

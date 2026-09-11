@@ -246,7 +246,37 @@ Calendar는 completion record 중심으로 동작하며, 예정 루틴·missed h
 
 V1.1은 UI/UX release이며 authentication flow, database schema, Supabase query 구조 및 루틴 scheduling/business logic은 유지했습니다.
 
+## V2.0 Completion Note
+
+- Optional note attached to each completion record
+- Today: add or edit a note after completing a habit
+- Habit Detail: view, add, edit, and delete notes for past completions
+- Calendar: note indicator and read-only note preview
+- Notes are limited to 1,000 Unicode code points
+- Completion facts and note metadata have separate lifecycles
+
+### Data Architecture
+
+- `habit_completions`: immutable completion event and date data
+- `habit_completion_notes`: optional mutable 1:1 note metadata
+- Deleting a completion cascades to its note
+- Notes do not change completion, streak, rate, or stats semantics
+
+### Security
+
+- Own-user RLS and composite ownership constraints protect note records
+- New notes cannot be added to archived habits
+- Existing notes on archived habits remain readable, editable, and deletable
+
+### UI Roles
+
+- Today: record today’s completion and write a note
+- Habit Detail: manage notes for completion history
+- Calendar: explore completion records and read-only note previews
+
 ## Known Issues
+
+- None. There are currently no user-facing known issues.
 
 현재 확인된 user-facing Known Issue는 없습니다.
 
@@ -287,8 +317,24 @@ npx tsc --noEmit
 npm run build
 ```
 
+## Maintenance / Deferred
+
+### Maintenance
+
+- Possible duplicate Today completion lookup
+- Calendar completion query pagination improvement
+- Review whether `getCompletionNoteFlags()` remains necessary
+
+### Deferred
+
+- Calendar note editing
+- Stats/Report note analysis
+- Note search and multiple notes
+- Mood/rating metadata
+- Past completion backfill
+
 ## Status
 
-현재 버전: **V1.3**
+현재 버전: **V2.0**
 
-V1.3 Known Issue Cleanup 및 Runtime & Accessibility Audit를 완료했습니다.
+V2.0 Completion Note 구현 및 Final Audit을 완료했습니다.

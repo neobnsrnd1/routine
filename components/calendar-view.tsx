@@ -129,11 +129,13 @@ export function CalendarView() {
             {cells.map((day, index) => {
               const value = day ? [year, pad(month), pad(day)].join("-") : "empty-" + index;
               const items = day ? (days[value] ?? []) : [];
+              const noteCount = items.filter((item) => item.note !== null).length;
               const isToday = value === today(),
                 isSelected = value === selected;
               const label = day
                 ? formatDate(value) +
                   (items.length ? ", 완료 기록 " + items.length + "개" : ", 완료 기록 없음") +
+                  (noteCount > 0 ? ", 메모 있음" : "") +
                   (isSelected ? ", 선택됨" : "") +
                   (isToday ? ", 오늘" : "")
                 : undefined;
@@ -159,6 +161,12 @@ export function CalendarView() {
                         <span className="flex items-center gap-1 text-xs font-semibold">
                           <Check aria-hidden="true" className="h-3.5 w-3.5 text-primary" />
                           {items.length}
+                          {noteCount > 0 && (
+                            <span
+                              aria-hidden="true"
+                              className="h-1.5 w-1.5 rounded-full bg-primary"
+                            />
+                          )}
                         </span>
                       ) : (
                         <span aria-hidden="true" className="text-muted-foreground">
@@ -171,9 +179,22 @@ export function CalendarView() {
               );
             })}
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="달력 범례">
-            <span className="flex items-center gap-1"><Check aria-hidden="true" className="h-3.5 w-3.5 text-primary" /> 완료 기록 있음</span>
-            <span className="flex items-center gap-1"><span aria-hidden="true">·</span> 기록 없음</span>
+          <div
+            className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"
+            aria-label="달력 범례"
+          >
+            <span className="flex items-center gap-1">
+              <Check aria-hidden="true" className="h-3.5 w-3.5 text-primary" /> 완료 기록 있음
+            </span>
+            <span className="flex items-center gap-1">
+              <span aria-hidden="true">·</span> 기록 없음
+            </span>
+          </div>
+          <div
+            className="flex items-center gap-1 text-xs text-muted-foreground"
+            aria-label="메모 범례"
+          >
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" /> 메모 있음
           </div>
           <section aria-labelledby="selected-date" className="rounded-xl border bg-card p-5">
             <h3 id="selected-date" className="font-medium">
@@ -186,7 +207,14 @@ export function CalendarView() {
                     key={record.habitId}
                     className="flex items-center justify-between gap-3 py-3 text-sm"
                   >
-                    <span className="min-w-0 break-words">{record.name}</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="break-words">{record.name}</span>
+                      {record.note && (
+                        <p className="line-clamp-2 break-words text-xs text-muted-foreground">
+                          {record.note}
+                        </p>
+                      )}
+                    </div>
                     <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
                       <Check aria-hidden="true" className="h-4 w-4 text-primary" />
                       완료

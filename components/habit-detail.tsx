@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, Check, Circle, Minus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getHabitDetail } from "@/lib/habits/detail";
 import { formatHabitSchedule } from "@/lib/habits/schedule";
 import type { Habit } from "@/lib/habits/types";
@@ -11,6 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
+import {
+  createCompletionNote,
+  deleteCompletionNote,
+  updateCompletionNote,
+} from "@/lib/habits/note-actions";
+import type { CompletionHistoryRow } from "@/lib/habits/types";
 
 type DetailData = {
   habit: Habit;
@@ -18,6 +24,7 @@ type DetailData = {
   rate7: { rate: number };
   rate30: { rate: number };
   rows: { completed_date: string }[];
+  history: CompletionHistoryRow[];
 };
 const localDate = () => {
   const d = new Date();
@@ -48,6 +55,13 @@ export function HabitDetail({ id }: { id: string }) {
   const [date, setDate] = useState(localDate);
   const [data, setData] = useState<DetailData | null>(null);
   const [error, setError] = useState("");
+  const [editingCompletionId, setEditingCompletionId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [notePendingId, setNotePendingId] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState("");
+  const [noteErrorCompletionId, setNoteErrorCompletionId] = useState<string | null>(null);
+  const noteTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const noteRowRefs = useRef<Record<string, HTMLLIElement | null>>({});
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -71,6 +85,95 @@ export function HabitDetail({ id }: { id: string }) {
       active = false;
     };
   }, [id, date]);
+  const closeEditor = () => {
+    const completionId = editingCompletionId;
+    setEditingCompletionId(null);
+    setNoteDraft("");
+    setNoteError("");
+    setNoteErrorCompletionId(null);
+    if (completionId) requestAnimationFrame(() => noteTriggerRefs.current[completionId]?.focus());
+  };
+  const openEditor = (row: CompletionHistoryRow) => {
+    setEditingCompletionId(row.completion_id);
+    setNoteDraft(row.note?.note ?? "");
+    setNoteError("");
+    setNoteErrorCompletionId(null);
+  };
+  const saveNote = async (row: CompletionHistoryRow) => {
+    if (notePendingId) return;
+    setNotePendingId(row.completion_id);
+    setNoteError("");
+    try {
+      const result = row.note
+        ? await updateCompletionNote(row.completion_id, noteDraft)
+        : await createCompletionNote(row.completion_id, noteDraft);
+      if (!result.success) {
+        setNoteError(result.message);
+        setNoteErrorCompletionId(row.completion_id);
+        return;
+      }
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              history: current.history.map((item) =>
+                item.completion_id === row.completion_id
+                  ? {
+                      ...item,
+                      note: {
+                        completion_id: row.completion_id,
+                        note: noteDraft.trim(),
+                        created_at: item.note?.created_at ?? new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                      },
+                    }
+                  : item,
+              ),
+            }
+          : current,
+      );
+      closeEditor();
+    } catch {
+      setNoteError("메모 저장에 실패했습니다. 다시 시도해 주세요.");
+      setNoteErrorCompletionId(row.completion_id);
+    } finally {
+      setNotePendingId(null);
+    }
+  };
+  const removeNote = async (row: CompletionHistoryRow) => {
+    if (
+      notePendingId ||
+      !window.confirm("메모를 삭제할까요?\n완료 기록은 유지되고 메모만 삭제됩니다.")
+    )
+      return;
+    setNotePendingId(row.completion_id);
+    setNoteError("");
+    try {
+      const result = await deleteCompletionNote(row.completion_id);
+      if (!result.success) {
+        setNoteError(result.message);
+        setNoteErrorCompletionId(row.completion_id);
+        return;
+      }
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              history: current.history.map((item) =>
+                item.completion_id === row.completion_id ? { ...item, note: null } : item,
+              ),
+            }
+          : current,
+      );
+      if (editingCompletionId === row.completion_id) closeEditor();
+      requestAnimationFrame(() => noteRowRefs.current[row.completion_id]?.focus());
+    } catch {
+      setNoteError("메모를 삭제하지 못했습니다. 다시 시도해 주세요.");
+      setNoteErrorCompletionId(row.completion_id);
+    } finally {
+      setNotePendingId(null);
+    }
+  };
   useEffect(() => {
     const onVisible = () => {
       const current = localDate();
@@ -82,7 +185,7 @@ export function HabitDetail({ id }: { id: string }) {
   if (error) return <ErrorState message={error} />;
   if (!data) return <LoadingState label="루틴 상세 정보를 불러오는 중..." />;
 
-  const { habit, rows } = data;
+  const { habit, rows, history } = data;
   const completed = new Set(rows.map((row) => row.completed_date));
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const archivedDate = habit.archived_at
@@ -101,7 +204,9 @@ export function HabitDetail({ id }: { id: string }) {
       return "예정 없음";
     return "미완료";
   };
-  const recentRecords = [...rows].sort((a, b) => b.completed_date.localeCompare(a.completed_date));
+  const recentRecords = [...history].sort((a, b) =>
+    b.completed_date.localeCompare(a.completed_date),
+  );
   return (
     <div className="space-y-8">
       <Button asChild variant="ghost" className="-ml-3 min-h-11 px-3">
@@ -198,14 +303,110 @@ export function HabitDetail({ id }: { id: string }) {
           <ul className="divide-y rounded-xl border bg-card">
             {recentRecords.map((row) => (
               <li
-                key={row.completed_date}
-                className="flex items-center justify-between gap-3 p-3 text-sm"
+                ref={(element) => {
+                  noteRowRefs.current[row.completion_id] = element;
+                }}
+                tabIndex={-1}
+                key={row.completion_id}
+                className="space-y-2 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <span>{formatDate(row.completed_date)}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <span>{formatDate(row.completed_date)}</span>
+                  {(!habit.archived_at || row.note) &&
+                    editingCompletionId !== row.completion_id && (
+                      <button
+                        ref={(element) => {
+                          noteTriggerRefs.current[row.completion_id] = element;
+                        }}
+                        type="button"
+                        onClick={() => openEditor(row)}
+                        disabled={notePendingId !== null}
+                        className="min-h-11 text-sm font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        {row.note ? "수정" : "메모 추가"}
+                      </button>
+                    )}
+                </div>
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <Check aria-hidden="true" className="h-4 w-4 text-primary" />
                   완료
                 </span>
+                {row.note && editingCompletionId !== row.completion_id && (
+                  <p className="line-clamp-2 break-words text-muted-foreground">{row.note.note}</p>
+                )}
+                {editingCompletionId === row.completion_id && (
+                  <div className="space-y-2">
+                    <textarea
+                      autoFocus
+                      value={noteDraft}
+                      onChange={(event) =>
+                        setNoteDraft(Array.from(event.target.value).slice(0, 1000).join(""))
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape" && !notePendingId) closeEditor();
+                      }}
+                      aria-label={`${formatDate(row.completed_date)} 메모`}
+                      aria-describedby={
+                        noteError && noteErrorCompletionId === row.completion_id
+                          ? `detail-note-error-${row.completion_id}`
+                          : undefined
+                      }
+                      className="min-h-24 w-full resize-y rounded-md border bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>{Array.from(noteDraft).length} / 1000</span>
+                      {noteError && noteErrorCompletionId === row.completion_id && (
+                        <span
+                          id={`detail-note-error-${row.completion_id}`}
+                          role="alert"
+                          className="text-destructive"
+                        >
+                          {noteError}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void saveNote(row)}
+                        disabled={notePendingId === row.completion_id || !noteDraft.trim()}
+                      >
+                        저장
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={closeEditor}
+                        disabled={notePendingId === row.completion_id}
+                      >
+                        취소
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {noteError &&
+                  noteErrorCompletionId === row.completion_id &&
+                  editingCompletionId !== row.completion_id && (
+                    <p
+                      id={`detail-note-error-${row.completion_id}`}
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {noteError}
+                    </p>
+                  )}
+                {row.note && editingCompletionId !== row.completion_id && (
+                  <button
+                    type="button"
+                    onClick={() => void removeNote(row)}
+                    disabled={notePendingId !== null}
+                    className="min-h-11 text-sm text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    메모 삭제
+                  </button>
+                )}
               </li>
             ))}
           </ul>

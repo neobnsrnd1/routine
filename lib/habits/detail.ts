@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { calculateHabitStreak } from "./streak";
 import { completionRate } from "./rates";
 import { getAllCompletionRows } from "./completion-rows";
+import { getCompletionHistoryWithNotes } from "./notes";
 const dateOk = (v: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
   const [y, m, d] = v.split("-").map(Number),
@@ -65,6 +66,14 @@ export async function getHabitDetail(id: string, date: string, timezone: string)
       success: false as const,
       message: "습관 상세 정보를 불러오지 못했습니다.",
     };
+  const history = await getCompletionHistoryWithNotes({
+    habitId: habit.id,
+    userId,
+    startDate: habit.start_date,
+    endDate: date,
+  });
+  if (!history.success)
+    return { success: false as const, message: "습관 상세 정보를 불러오지 못했습니다." };
   return {
     success: true as const,
     habit,
@@ -82,5 +91,6 @@ export async function getHabitDetail(id: string, date: string, timezone: string)
       date,
     ),
     rows: completionRows.rows,
+    history: history.rows,
   };
 }
