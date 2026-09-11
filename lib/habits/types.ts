@@ -7,6 +7,7 @@ export type Habit = {
   schedule_type: HabitScheduleType;
   days_of_week: number[] | null;
   target_per_week: number | null;
+  sort_order?: number;
   start_date: string;
   archived_at: string | null;
   created_at: string;

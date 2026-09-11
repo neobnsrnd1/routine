@@ -21,11 +21,13 @@ export async function getActiveHabits(): Promise<HabitsResult> {
     const { data, error } = await supabase
       .from("habits")
       .select(
-        "id, user_id, name, schedule_type, days_of_week, target_per_week, start_date, archived_at, created_at, updated_at",
+        "id, user_id, name, schedule_type, days_of_week, target_per_week, sort_order, start_date, archived_at, created_at, updated_at",
       )
       .eq("user_id", userId)
       .is("archived_at", null)
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .returns<Habit[]>();
 
     if (error || data === null) {

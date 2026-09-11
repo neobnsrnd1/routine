@@ -274,6 +274,20 @@ V1.1은 UI/UX release이며 authentication flow, database schema, Supabase query
 - Habit Detail: manage notes for completion history
 - Calendar: explore completion records and read-only note previews
 
+## V2.1 Habit Reorder
+
+- Active habit ordering on `/habits`
+- The same ordering is used for Today on `/dashboard`
+- Shared `habits.sort_order` with stable `created_at` and `id` tie-breaks
+- Atomic `reorder_habits(uuid[])` RPC with authenticated ownership validation
+- Accessible up/down reorder controls
+- Archived habits preserve their existing `sort_order`
+
+### V2.1 Security
+
+- The RPC uses `auth.uid()` and validates the exact active-habit set
+- Direct `sort_order` updates are blocked; ordering changes use the RPC
+
 ## Known Issues
 
 - None. There are currently no user-facing known issues.
@@ -332,9 +346,13 @@ npm run build
 - Note search and multiple notes
 - Mood/rating metadata
 - Past completion backfill
+- Drag-and-drop reorder
+- Stats, Calendar, and Habit Detail ordering
+- Archived ordering UI
+- Real-time multi-tab synchronization
 
 ## Status
 
-현재 버전: **V2.0**
+현재 버전: **V2.1**
 
-V2.0 Completion Note 구현 및 Final Audit을 완료했습니다.
+V2.1 Habit Reorder 구현 및 Final Audit을 완료했습니다.

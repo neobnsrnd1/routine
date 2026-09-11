@@ -17,6 +17,30 @@ export type UpdateHabitState = {
 export type ArchiveHabitState = { status: "idle" | "success" | "error"; message: string };
 
 const initialState: CreateHabitState = { status: "idle", message: "" };
+const habitIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type ReorderHabitsResult = { success: true } | { success: false; message: string };
+
+export async function reorderHabits(habitIds: string[]): Promise<ReorderHabitsResult> {
+  if (!Array.isArray(habitIds) || habitIds.some((id) => typeof id !== "string"))
+    return { success: false, message: "루틴 순서가 올바르지 않습니다." };
+  if (habitIds.some((id) => !habitIdPattern.test(id)) || new Set(habitIds).size !== habitIds.length)
+    return { success: false, message: "루틴 순서가 올바르지 않습니다." };
+  try {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getClaims();
+    if (authError || !authData?.claims?.sub)
+      return { success: false, message: "로그인 상태를 확인해 주세요." };
+    const { error } = await supabase.rpc("reorder_habits", { habit_ids: habitIds });
+    if (error)
+      return { success: false, message: "루틴 순서를 저장하지 못했습니다. 다시 시도해 주세요." };
+    revalidatePath("/habits");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch {
+    return { success: false, message: "루틴 순서를 저장하지 못했습니다. 다시 시도해 주세요." };
+  }
+}
 
 function validDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
