@@ -2,11 +2,11 @@
 
 반복되는 일상 루틴을 만들고, 오늘의 실행과 완료 기록을 관리하는 habit tracking application입니다.
 
-## Overview
+## 개요
 
 Routine은 이메일 기반 인증 후 루틴을 생성하고 일정에 따라 오늘 할 일을 확인할 수 있습니다. 완료 기록, 연속 달성(streak), 월별 기록과 통계를 통해 꾸준한 실행 흐름을 확인할 수 있습니다.
 
-## Features
+## 주요 기능
 
 - 이메일/비밀번호 회원가입, 로그인, 비밀번호 재설정
 - 루틴 생성, 수정, 보관
@@ -18,7 +18,7 @@ Routine은 이메일 기반 인증 후 루틴을 생성하고 일정에 따라 �
 - 반응형 모바일/데스크톱 UI
 - Light/Dark/System 테마
 
-## Schedule Types
+## 일정 유형
 
 - `Daily`: 매일 수행하는 루틴
 - `Specific Days`: 선택한 요일에 수행하는 루틴
@@ -26,7 +26,7 @@ Routine은 이메일 기반 인증 후 루틴을 생성하고 일정에 따라 �
 
 Weekly Target은 특정 날짜를 자동으로 미완료로 해석하는 방식이 아니라 주간 목표 개념으로 사용됩니다.
 
-## Tech Stack
+## 기술 스택
 
 - Next.js 16.3.4 (App Router)
 - React 19
@@ -38,15 +38,15 @@ Weekly Target은 특정 날짜를 자동으로 미완료로 해석하는 방식�
 - ESLint 9
 - Prettier
 
-## Routes
+## 라우트
 
-### Public
+### 공개 라우트
 
 | Route | Description              |
 | ----- | ------------------------ |
 | `/`   | 서비스 소개 및 진입 화면 |
 
-### Auth
+### 인증 라우트
 
 | Route                   | Description                |
 | ----------------------- | -------------------------- |
@@ -58,7 +58,7 @@ Weekly Target은 특정 날짜를 자동으로 미완료로 해석하는 방식�
 | `/auth/error`           | 인증 오류 안내             |
 | `/auth/confirm`         | 이메일 인증 callback route |
 
-### Authenticated
+### 인증 필요 라우트
 
 | Route          | Description            |
 | -------------- | ---------------------- |
@@ -67,8 +67,9 @@ Weekly Target은 특정 날짜를 자동으로 미완료로 해석하는 방식�
 | `/habits/[id]` | 루틴 상세 및 완료 기록 |
 | `/calendar`    | 월별 완료 기록         |
 | `/stats`       | 루틴 통계              |
+| `/review`      | 주간/월간 기록 리뷰    |
 
-## Project Structure
+## 프로젝트 구조
 
 ```text
 app/
@@ -88,7 +89,7 @@ supabase/
   migrations/         database migration
 ```
 
-## Version History
+## 버전 기록
 
 ### V1.0 — Initial Release
 
@@ -246,64 +247,80 @@ Calendar는 completion record 중심으로 동작하며, 예정 루틴·missed h
 
 V1.1은 UI/UX release이며 authentication flow, database schema, Supabase query 구조 및 루틴 scheduling/business logic은 유지했습니다.
 
-## V2.0 Completion Note
+## V2.0 완료 기록 메모
 
-- Optional note attached to each completion record
-- Today: add or edit a note after completing a habit
-- Habit Detail: view, add, edit, and delete notes for past completions
-- Calendar: note indicator and read-only note preview
-- Notes are limited to 1,000 Unicode code points
-- Completion facts and note metadata have separate lifecycles
+- 각 완료 기록에 선택적으로 메모를 연결할 수 있습니다.
+- Today: 루틴 완료 후 메모를 추가하거나 수정할 수 있습니다.
+- Habit Detail: 과거 완료 기록의 메모를 조회, 추가, 수정, 삭제할 수 있습니다.
+- Calendar: 메모 표시와 읽기 전용 메모 미리보기를 제공합니다.
+- 메모는 Unicode code point 기준 1,000자로 제한됩니다.
+- 완료 기록과 메모 metadata는 서로 독립된 lifecycle을 가집니다.
 
-### Data Architecture
+### 데이터 구조
 
-- `habit_completions`: immutable completion event and date data
-- `habit_completion_notes`: optional mutable 1:1 note metadata
-- Deleting a completion cascades to its note
-- Notes do not change completion, streak, rate, or stats semantics
+- `habit_completions`: 변경하지 않는 완료 event와 날짜 데이터
+- `habit_completion_notes`: 완료 기록별 선택적 mutable 1:1 메모 metadata
+- 완료 기록을 삭제하면 연결된 메모도 cascade 삭제됩니다.
+- 메모는 completion, streak, rate, stats semantics를 변경하지 않습니다.
 
-### Security
+### 보안
 
-- Own-user RLS and composite ownership constraints protect note records
-- New notes cannot be added to archived habits
-- Existing notes on archived habits remain readable, editable, and deletable
+- own-user RLS와 composite ownership constraint로 메모 record를 보호합니다.
+- 보관된 루틴에는 새 메모를 추가할 수 없습니다.
+- 보관된 루틴의 기존 메모는 조회, 수정, 삭제할 수 있습니다.
 
-### UI Roles
+### 화면별 역할
 
-- Today: record today’s completion and write a note
-- Habit Detail: manage notes for completion history
-- Calendar: explore completion records and read-only note previews
+- Today: 오늘의 완료 기록을 남기고 메모를 작성합니다.
+- Habit Detail: 완료 기록의 메모를 관리합니다.
+- Calendar: 완료 기록과 읽기 전용 메모 미리보기를 탐색합니다.
 
-## V2.1 Habit Reorder
+## V2.1 루틴 순서 변경
 
-- Active habit ordering on `/habits`
-- The same ordering is used for Today on `/dashboard`
-- Shared `habits.sort_order` with stable `created_at` and `id` tie-breaks
-- Atomic `reorder_habits(uuid[])` RPC with authenticated ownership validation
-- Accessible up/down reorder controls
-- Archived habits preserve their existing `sort_order`
+- `/habits`의 활성 루틴 순서 변경
+- `/dashboard` Today에서도 동일한 순서 사용
+- `created_at`과 `id`를 stable tie-break로 사용하는 `habits.sort_order`
+- 인증된 ownership validation을 포함한 atomic `reorder_habits(uuid[])` RPC
+- 접근 가능한 위/아래 순서 변경 control
+- 보관된 루틴은 기존 `sort_order`를 유지
 
-### V2.1 Security
+### V2.1 보안
 
-- The RPC uses `auth.uid()` and validates the exact active-habit set
-- Direct `sort_order` updates are blocked; ordering changes use the RPC
+- RPC는 `auth.uid()`를 사용하고 정확한 활성 루틴 집합을 검증합니다.
+- `sort_order` 직접 update는 차단되며 순서 변경은 RPC를 사용합니다.
 
-## Known Issues
+## V2.2 완료 메모 UX 개선
 
-- None. There are currently no user-facing known issues.
+- Habit Detail의 메모 있음 filter와 현재 history 기준 메모 수 요약
+- 긴 메모를 쉽게 읽기 위한 펼치기/접기
+- Calendar 선택 날짜의 완료/메모 요약과 명확한 미리보기 hierarchy
+- Calendar 완료 기록에서 관련 Habit Detail로 이동하는 링크
+- database schema 변경 없음; completion과 note lifecycle 유지
 
-현재 확인된 user-facing Known Issue는 없습니다.
+## V2.3 주간 / 월간 리뷰
+
+- 현재 주간과 현재 월을 리뷰하는 `/review` route
+- 완료 횟수, 완료한 날짜 수, 메모 수 요약
+- 현재 사용 중인 루틴별 최소 기록 breakdown
+- 보관된 루틴의 과거 기록도 유지하는 읽기 전용 메모 timeline
+- 인증된 Review query의 completion pagination과 chunk-safe 메모 조회
+- Review 기록에서 Habit Detail로 이동하는 링크
+- Review는 completion이나 note를 변경하지 않으며 새 database schema가 필요하지 않습니다.
+
+## 알려진 문제
+
+현재 확인된 사용자 대상 알려진 문제는 없습니다.
 
 `lib/demo-habits.ts`는 production import가 없는 maintenance backlog 파일입니다.
 
-## Development
+## 개발 환경
 
-### Requirements
+### 요구 사항
 
 - Node.js
 - Supabase project
 
-### Environment Variables
+### 환경 변수
 
 `.env.local`에 다음 변수를 설정합니다. 실제 값이나 secret은 repository에 커밋하지 않습니다.
 
@@ -312,7 +329,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
-### Install and Run
+### 설치 및 실행
 
 ```bash
 npm install
@@ -321,7 +338,7 @@ npm run dev
 
 개발 서버는 기본적으로 [http://localhost:3000](http://localhost:3000)에서 실행됩니다.
 
-### Validation
+### 검증
 
 ```bash
 npm run format
@@ -331,28 +348,34 @@ npx tsc --noEmit
 npm run build
 ```
 
-## Maintenance / Deferred
+## 유지보수 / 추후 작업
 
-### Maintenance
+### 유지보수
 
-- Possible duplicate Today completion lookup
-- Calendar completion query pagination improvement
-- Review whether `getCompletionNoteFlags()` remains necessary
+- Today completion lookup 중복 가능성 검토
+- Calendar completion query pagination 개선
+- Habit Detail history pagination 및 장기 history 처리
+- `getCompletionNoteFlags()` 유지 필요성 검토
+- `lib/demo-habits.ts` production 미사용 파일 정리
 
-### Deferred
+### 추후 작업
 
-- Calendar note editing
-- Stats/Report note analysis
-- Note search and multiple notes
-- Mood/rating metadata
-- Past completion backfill
-- Drag-and-drop reorder
-- Stats, Calendar, and Habit Detail ordering
-- Archived ordering UI
-- Real-time multi-tab synchronization
+- Stats/Report 메모 분석
+- 메모 검색 및 multiple notes
+- mood/rating metadata
+- 과거 완료 기록 backfill
+- drag-and-drop 순서 변경
+- Stats, Calendar, Habit Detail 순서 변경
+- 보관된 루틴 순서 변경 UI
+- 실시간 multi-tab 동기화
+- 특정 completion deep link
+- 이전/다음 주 또는 월 navigation
+- Dashboard의 Review 진입점
+- Review의 보관된 루틴 breakdown
+- Review rate, streak 비교, chart, AI summary
 
-## Status
+## 현재 상태
 
-현재 버전: **V2.1**
+현재 버전: **V2.3 — 주간/월간 기록 리뷰**
 
-V2.1 Habit Reorder 구현 및 Final Audit을 완료했습니다.
+V2.3 구현과 정적 Final Audit을 완료했습니다. 브라우저 및 실제 실행 환경 검증은 아직 진행 전입니다.

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getCalendarMonth, type CalendarCompletion } from "@/lib/habits/calendar";
@@ -81,6 +82,7 @@ export function CalendarView() {
     setSelected(current);
   };
   const records = days[selected] ?? [];
+  const noteCount = records.filter((record) => record.note !== null).length;
   if (!year || !month) return <LoadingState label="달력을 불러오는 중..." />;
   return (
     <div className="space-y-6">
@@ -200,6 +202,11 @@ export function CalendarView() {
             <h3 id="selected-date" className="font-medium">
               {formatDate(selected)}
             </h3>
+            {records.length > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                완료 {records.length}개{noteCount > 0 ? ` · 메모 ${noteCount}개` : ""}
+              </p>
+            )}
             {records.length ? (
               <ul className="mt-3 divide-y">
                 {records.map((record) => (
@@ -208,9 +215,14 @@ export function CalendarView() {
                     className="flex items-center justify-between gap-3 py-3 text-sm"
                   >
                     <div className="min-w-0 flex-1">
-                      <span className="break-words">{record.name}</span>
+                      <Link
+                        href={`/habits/${record.habitId}`}
+                        className="break-words font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {record.name}
+                      </Link>
                       {record.note && (
-                        <p className="line-clamp-2 break-words text-xs text-muted-foreground">
+                        <p className="line-clamp-2 break-words whitespace-pre-wrap text-xs text-muted-foreground">
                           {record.note}
                         </p>
                       )}

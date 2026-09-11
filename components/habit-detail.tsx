@@ -60,8 +60,11 @@ export function HabitDetail({ id }: { id: string }) {
   const [notePendingId, setNotePendingId] = useState<string | null>(null);
   const [noteError, setNoteError] = useState("");
   const [noteErrorCompletionId, setNoteErrorCompletionId] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<"all" | "notes">("all");
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<string>>(new Set());
   const noteTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const noteRowRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const historyFilterRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -165,8 +168,16 @@ export function HabitDetail({ id }: { id: string }) {
             }
           : current,
       );
+      setExpandedNoteIds((current) => {
+        const next = new Set(current);
+        next.delete(row.completion_id);
+        return next;
+      });
       if (editingCompletionId === row.completion_id) closeEditor();
-      requestAnimationFrame(() => noteRowRefs.current[row.completion_id]?.focus());
+      requestAnimationFrame(() => {
+        if (historyFilter === "notes") historyFilterRefs.current.notes?.focus();
+        else noteRowRefs.current[row.completion_id]?.focus();
+      });
     } catch {
       setNoteError("메모를 삭제하지 못했습니다. 다시 시도해 주세요.");
       setNoteErrorCompletionId(row.completion_id);
@@ -207,6 +218,17 @@ export function HabitDetail({ id }: { id: string }) {
   const recentRecords = [...history].sort((a, b) =>
     b.completed_date.localeCompare(a.completed_date),
   );
+  const noteCount = recentRecords.filter((row) => row.note !== null).length;
+  const filteredRecords =
+    historyFilter === "notes" ? recentRecords.filter((row) => row.note !== null) : recentRecords;
+  const toggleNoteExpanded = (completionId: string) => {
+    setExpandedNoteIds((current) => {
+      const next = new Set(current);
+      if (next.has(completionId)) next.delete(completionId);
+      else next.add(completionId);
+      return next;
+    });
+  };
   return (
     <div className="space-y-8">
       <Button asChild variant="ghost" className="-ml-3 min-h-11 px-3">
@@ -290,6 +312,39 @@ export function HabitDetail({ id }: { id: string }) {
         <h2 id="records-title" className="font-semibold">
           최근 기록
         </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            최근 기록 {recentRecords.length}개 · 메모 {noteCount}개
+          </p>
+          <div className="flex flex-wrap gap-2" aria-label="최근 기록 필터">
+            <Button
+              type="button"
+              ref={(element) => {
+                historyFilterRefs.current.all = element;
+              }}
+              variant={historyFilter === "all" ? "secondary" : "outline"}
+              size="sm"
+              aria-pressed={historyFilter === "all"}
+              disabled={editingCompletionId !== null}
+              onClick={() => setHistoryFilter("all")}
+            >
+              전체
+            </Button>
+            <Button
+              type="button"
+              ref={(element) => {
+                historyFilterRefs.current.notes = element;
+              }}
+              variant={historyFilter === "notes" ? "secondary" : "outline"}
+              size="sm"
+              aria-pressed={historyFilter === "notes"}
+              disabled={editingCompletionId !== null}
+              onClick={() => setHistoryFilter("notes")}
+            >
+              메모 있음
+            </Button>
+          </div>
+        </div>
         {recentRecords.length === 0 ? (
           <EmptyState
             title="아직 완료 기록이 없어요."
@@ -299,116 +354,144 @@ export function HabitDetail({ id }: { id: string }) {
                 : "오늘부터 첫 기록을 만들어보세요."
             }
           />
+        ) : filteredRecords.length === 0 ? (
+          <div className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">
+            최근 기록에 작성된 메모가 없습니다.
+          </div>
         ) : (
           <ul className="divide-y rounded-xl border bg-card">
-            {recentRecords.map((row) => (
-              <li
-                ref={(element) => {
-                  noteRowRefs.current[row.completion_id] = element;
-                }}
-                tabIndex={-1}
-                key={row.completion_id}
-                className="space-y-2 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span>{formatDate(row.completed_date)}</span>
-                  {(!habit.archived_at || row.note) &&
-                    editingCompletionId !== row.completion_id && (
-                      <button
-                        ref={(element) => {
-                          noteTriggerRefs.current[row.completion_id] = element;
-                        }}
-                        type="button"
-                        onClick={() => openEditor(row)}
-                        disabled={notePendingId !== null}
-                        className="min-h-11 text-sm font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                      >
-                        {row.note ? "수정" : "메모 추가"}
-                      </button>
-                    )}
-                </div>
-                <span className="flex items-center gap-1 text-muted-foreground">
-                  <Check aria-hidden="true" className="h-4 w-4 text-primary" />
-                  완료
-                </span>
-                {row.note && editingCompletionId !== row.completion_id && (
-                  <p className="line-clamp-2 break-words text-muted-foreground">{row.note.note}</p>
-                )}
-                {editingCompletionId === row.completion_id && (
-                  <div className="space-y-2">
-                    <textarea
-                      autoFocus
-                      value={noteDraft}
-                      onChange={(event) =>
-                        setNoteDraft(Array.from(event.target.value).slice(0, 1000).join(""))
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape" && !notePendingId) closeEditor();
-                      }}
-                      aria-label={`${formatDate(row.completed_date)} 메모`}
-                      aria-describedby={
-                        noteError && noteErrorCompletionId === row.completion_id
-                          ? `detail-note-error-${row.completion_id}`
-                          : undefined
-                      }
-                      className="min-h-24 w-full resize-y rounded-md border bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                      <span>{Array.from(noteDraft).length} / 1000</span>
-                      {noteError && noteErrorCompletionId === row.completion_id && (
-                        <span
-                          id={`detail-note-error-${row.completion_id}`}
-                          role="alert"
-                          className="text-destructive"
+            {filteredRecords.map((row) => {
+              const isExpanded = expandedNoteIds.has(row.completion_id);
+              return (
+                <li
+                  ref={(element) => {
+                    noteRowRefs.current[row.completion_id] = element;
+                  }}
+                  tabIndex={-1}
+                  key={row.completion_id}
+                  className="space-y-2 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{formatDate(row.completed_date)}</span>
+                    {(!habit.archived_at || row.note) &&
+                      editingCompletionId !== row.completion_id && (
+                        <button
+                          ref={(element) => {
+                            noteTriggerRefs.current[row.completion_id] = element;
+                          }}
+                          type="button"
+                          onClick={() => openEditor(row)}
+                          disabled={notePendingId !== null}
+                          className="min-h-11 text-sm font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                         >
-                          {noteError}
-                        </span>
+                          {row.note ? "수정" : "메모 추가"}
+                        </button>
                       )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => void saveNote(row)}
-                        disabled={notePendingId === row.completion_id || !noteDraft.trim()}
-                      >
-                        저장
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={closeEditor}
-                        disabled={notePendingId === row.completion_id}
-                      >
-                        취소
-                      </Button>
-                    </div>
                   </div>
-                )}
-                {noteError &&
-                  noteErrorCompletionId === row.completion_id &&
-                  editingCompletionId !== row.completion_id && (
-                    <p
-                      id={`detail-note-error-${row.completion_id}`}
-                      role="alert"
-                      className="text-sm text-destructive"
-                    >
-                      {noteError}
-                    </p>
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Check aria-hidden="true" className="h-4 w-4 text-primary" />
+                    완료
+                  </span>
+                  {row.note && editingCompletionId !== row.completion_id && (
+                    <>
+                      <p
+                        id={`detail-note-${row.completion_id}`}
+                        className={
+                          isExpanded
+                            ? "whitespace-pre-wrap break-words text-muted-foreground"
+                            : "line-clamp-2 break-words text-muted-foreground"
+                        }
+                      >
+                        {row.note.note}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-expanded={isExpanded}
+                        aria-controls={`detail-note-${row.completion_id}`}
+                        onClick={() => toggleNoteExpanded(row.completion_id)}
+                      >
+                        {isExpanded ? "메모 접기" : "메모 더보기"}
+                      </Button>
+                    </>
                   )}
-                {row.note && editingCompletionId !== row.completion_id && (
-                  <button
-                    type="button"
-                    onClick={() => void removeNote(row)}
-                    disabled={notePendingId !== null}
-                    className="min-h-11 text-sm text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    메모 삭제
-                  </button>
-                )}
-              </li>
-            ))}
+                  {editingCompletionId === row.completion_id && (
+                    <div className="space-y-2">
+                      <textarea
+                        autoFocus
+                        value={noteDraft}
+                        onChange={(event) =>
+                          setNoteDraft(Array.from(event.target.value).slice(0, 1000).join(""))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape" && !notePendingId) closeEditor();
+                        }}
+                        aria-label={`${formatDate(row.completed_date)} 메모`}
+                        aria-describedby={
+                          noteError && noteErrorCompletionId === row.completion_id
+                            ? `detail-note-error-${row.completion_id}`
+                            : undefined
+                        }
+                        className="min-h-24 w-full resize-y rounded-md border bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span>{Array.from(noteDraft).length} / 1000</span>
+                        {noteError && noteErrorCompletionId === row.completion_id && (
+                          <span
+                            id={`detail-note-error-${row.completion_id}`}
+                            role="alert"
+                            className="text-destructive"
+                          >
+                            {noteError}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => void saveNote(row)}
+                          disabled={notePendingId === row.completion_id || !noteDraft.trim()}
+                        >
+                          저장
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={closeEditor}
+                          disabled={notePendingId === row.completion_id}
+                        >
+                          취소
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {noteError &&
+                    noteErrorCompletionId === row.completion_id &&
+                    editingCompletionId !== row.completion_id && (
+                      <p
+                        id={`detail-note-error-${row.completion_id}`}
+                        role="alert"
+                        className="text-sm text-destructive"
+                      >
+                        {noteError}
+                      </p>
+                    )}
+                  {row.note && editingCompletionId !== row.completion_id && (
+                    <button
+                      type="button"
+                      onClick={() => void removeNote(row)}
+                      disabled={notePendingId !== null}
+                      className="min-h-11 text-sm text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      메모 삭제
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
