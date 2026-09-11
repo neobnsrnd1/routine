@@ -307,6 +307,14 @@ V1.1은 UI/UX release이며 authentication flow, database schema, Supabase query
 - Review 기록에서 Habit Detail로 이동하는 링크
 - Review는 completion이나 note를 변경하지 않으며 새 database schema가 필요하지 않습니다.
 
+## V2.4 리뷰 기록 탐색
+
+- URL 기반 `period`/`reference` 상태
+- 이전/다음 주 및 월 navigation
+- 현재 기간의 미래 navigation 차단
+- URL과 ReviewData reconciliation 및 stale response 보호
+- 전역 navigation의 `/review` 진입점
+
 ## 알려진 문제
 
 현재 확인된 사용자 대상 알려진 문제는 없습니다.
@@ -357,6 +365,7 @@ npm run build
 - Habit Detail history pagination 및 장기 history 처리
 - `getCompletionNoteFlags()` 유지 필요성 검토
 - `lib/demo-habits.ts` production 미사용 파일 정리
+- 인증된 브라우저 runtime smoke test
 
 ### 추후 작업
 
@@ -369,13 +378,11 @@ npm run build
 - 보관된 루틴 순서 변경 UI
 - 실시간 multi-tab 동기화
 - 특정 completion deep link
-- 이전/다음 주 또는 월 navigation
-- Dashboard의 Review 진입점
 - Review의 보관된 루틴 breakdown
 - Review rate, streak 비교, chart, AI summary
 
 ## 현재 상태
 
-현재 버전: **V2.3 — 주간/월간 기록 리뷰**
+현재 버전: **V2.4 — 리뷰 기록 탐색**
 
-V2.3 구현과 정적 Final Audit을 완료했습니다. 브라우저 및 실제 실행 환경 검증은 아직 진행 전입니다.
+V2.4 구현과 정적 Final Audit을 완료했습니다. 실제 브라우저 및 모바일 runtime smoke test 후 release를 확정합니다.

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
@@ -13,6 +14,27 @@ const localDate = () => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
+const isValidDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+};
+
+const addDays = (value: string, amount: number) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+};
+
+const addMonthsFromStart = (value: string, amount: number) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + amount, 1);
+  return date.toISOString().slice(0, 10);
+};
+
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -21,8 +43,17 @@ const formatDate = (value: string) =>
   }).format(new Date(`${value}T00:00:00`));
 
 export function ReviewView() {
-  const [period, setPeriod] = useState<ReviewPeriodType>("weekly");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const today = localDate();
+  const periodParam = searchParams.get("period");
+  const referenceParam = searchParams.get("reference");
+  const period: ReviewPeriodType = periodParam === "monthly" ? "monthly" : "weekly";
+  const referenceDate = referenceParam && isValidDate(referenceParam) ? referenceParam : today;
+  const requestKey = `${period}:${referenceDate}`;
   const [data, setData] = useState<ReviewData | null>(null);
+  const [dataKey, setDataKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -33,16 +64,23 @@ export function ReviewView() {
       try {
         const result = await getReviewDataAction(
           period,
-          localDate(),
+          referenceDate,
           Intl.DateTimeFormat().resolvedOptions().timeZone,
         );
         if (!active) return;
         if (result.success) {
           setData(result.data);
+          setDataKey(requestKey);
           setError("");
-        } else setError(result.message);
+        } else {
+          setDataKey(requestKey);
+          setError(result.message);
+        }
       } catch {
-        if (active) setError("리뷰 데이터를 불러오지 못했습니다.");
+        if (active) {
+          setDataKey(requestKey);
+          setError("리뷰 데이터를 불러오지 못했습니다.");
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -51,7 +89,30 @@ export function ReviewView() {
     return () => {
       active = false;
     };
-  }, [period]);
+  }, [period, referenceDate, requestKey]);
+
+  const selectPeriod = (nextPeriod: ReviewPeriodType) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", nextPeriod);
+    params.set("reference", referenceDate);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const movePeriod = (amount: number) => {
+    if (!data || dataKey !== requestKey) return;
+    const nextReference =
+      period === "weekly"
+        ? addDays(data.period.startDate, amount * 7)
+        : addMonthsFromStart(data.period.startDate, amount);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", period);
+    params.set("reference", nextReference);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const isDataCurrent = dataKey === requestKey;
+  const isCurrentPeriod = isDataCurrent && data?.period.endDate === today;
+  const showLoading = loading || !isDataCurrent;
 
   return (
     <div className="space-y-6">
@@ -61,7 +122,7 @@ export function ReviewView() {
           className="min-h-11"
           variant={period === "weekly" ? "secondary" : "outline"}
           aria-pressed={period === "weekly"}
-          onClick={() => setPeriod("weekly")}
+          onClick={() => selectPeriod("weekly")}
         >
           주간
         </Button>
@@ -70,20 +131,45 @@ export function ReviewView() {
           className="min-h-11"
           variant={period === "monthly" ? "secondary" : "outline"}
           aria-pressed={period === "monthly"}
-          onClick={() => setPeriod("monthly")}
+          onClick={() => selectPeriod("monthly")}
         >
           월간
         </Button>
       </div>
-      {loading ? (
+      {showLoading ? (
         <LoadingState label="리뷰 데이터를 불러오는 중..." />
       ) : error ? (
         <ErrorState message={error} />
-      ) : data ? (
+      ) : data && isDataCurrent ? (
         <>
           <section aria-labelledby="review-period" className="space-y-2">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="리뷰 기간 이동">
+              <Button
+                type="button"
+                className="min-h-11"
+                variant="outline"
+                onClick={() => movePeriod(-1)}
+              >
+                이전 {period === "weekly" ? "주" : "달"}
+              </Button>
+              <Button
+                type="button"
+                className="min-h-11"
+                variant="outline"
+                disabled={isCurrentPeriod}
+                onClick={() => movePeriod(1)}
+              >
+                다음 {period === "weekly" ? "주" : "달"}
+              </Button>
+            </div>
             <h2 id="review-period" className="font-semibold">
-              {data.period.type === "weekly" ? "이번 주" : "이번 달"}
+              {isCurrentPeriod
+                ? period === "weekly"
+                  ? "이번 주"
+                  : "이번 달"
+                : period === "weekly"
+                  ? "주간 리뷰"
+                  : `${data.period.startDate.slice(0, 4)}년 ${Number(data.period.startDate.slice(5, 7))}월`}
             </h2>
             <p className="break-words text-sm text-muted-foreground">
               {formatDate(data.period.startDate)} – {formatDate(data.period.endDate)}
@@ -111,7 +197,10 @@ export function ReviewView() {
             <p className="text-sm text-muted-foreground">이 기간에는 아직 완료 기록이 없어요.</p>
           )}
           <ReviewHabitBreakdown data={data} />
-          <ReviewNoteTimeline key={data.period.type} data={data} />
+          <ReviewNoteTimeline
+            key={`${data.period.type}-${data.period.startDate}-${data.period.endDate}`}
+            data={data}
+          />
         </>
       ) : null}
     </div>

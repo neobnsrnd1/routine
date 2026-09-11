@@ -9,6 +9,7 @@ const links = [
   { href: "/habits", label: "Habits" },
   { href: "/calendar", label: "Calendar" },
   { href: "/stats", label: "Stats" },
+  { href: "/review", label: "Review" },
 ];
 
 function isActive(pathname: string, href: string) {
